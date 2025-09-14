@@ -9,47 +9,31 @@
 extern PatchProcessor* getInitialisingPatchProcessor();
 
 enum ParamKnob {
-    PARAM_KNOB_LOOPER_SPEED,
-    PARAM_KNOB_LOOPER_START,
-    PARAM_KNOB_LOOPER_LENGTH,
-    PARAM_KNOB_OSC_PITCH,
-    PARAM_KNOB_OSC_DETUNE,
     PARAM_KNOB_FILTER_CUTOFF,
     PARAM_KNOB_FILTER_RESONANCE,
     PARAM_KNOB_RESONATOR_TUNE,
     PARAM_KNOB_RESONATOR_FEEDBACK,
-    PARAM_KNOB_ECHO_REPEATS,
     PARAM_KNOB_ECHO_DENSITY,
-    PARAM_KNOB_AMBIENCE_DECAY,
+    PARAM_KNOB_ECHO_REPEATS,
     PARAM_KNOB_AMBIENCE_SPACETIME,
+    PARAM_KNOB_AMBIENCE_DECAY,
     PARAM_KNOB_MOD_LEVEL,
     PARAM_KNOB_MOD_SPEED,
     PARAM_KNOB_LAST
 };
 
 const PatchParameterId paramKnobMap[PARAM_KNOB_LAST] = {
-    PARAMETER_CA,
-    PARAMETER_CF, // Looper start
-    PARAMETER_CD,
-    PARAMETER_CE,
-    PARAMETER_CC,
-    PARAMETER_DE,
-    PARAMETER_CB,
-    PARAMETER_CG,
-    PARAMETER_CH,
-    PARAMETER_DF,
-    PARAMETER_DG,
-    PARAMETER_DB,
-    PARAMETER_DA,
-    PARAMETER_DC,
-    PARAMETER_DD,
+    PARAMETER_BA,
+    PARAMETER_BB,
+    PARAMETER_BC,
+    PARAMETER_BD,
+    PARAMETER_BE,
+    PARAMETER_BF,
+    PARAMETER_BG,
+    PARAMETER_BH,
 };
 
 enum ParamFader {
-    PARAM_FADER_LOOPER_VOL,
-    PARAM_FADER_OSC1_VOL,
-    PARAM_FADER_OSC2_VOL,
-    PARAM_FADER_IN_VOL,
     PARAM_FADER_FILTER_VOL,
     PARAM_FADER_RESONATOR_VOL,
     PARAM_FADER_ECHO_VOL,
@@ -58,26 +42,17 @@ enum ParamFader {
 };
 
 const PatchParameterId paramFaderMap[PARAM_FADER_LAST] = {
-    PARAMETER_BA,
-    PARAMETER_BH,
-    PARAMETER_BG,
-    PARAMETER_BF,
-    PARAMETER_BE,
-    PARAMETER_BD,
-    PARAMETER_BC,
-    PARAMETER_BB,
+    PARAMETER_F,
+    PARAMETER_G,
+    PARAMETER_H,
+    PARAMETER_AC,
 };
 
 enum ParamCv {
-    PARAM_CV_LOOPER_SPEED,
-    PARAM_CV_LOOPER_START,
-    PARAM_CV_LOOPER_LENGTH,
-    PARAM_CV_OSC_PITCH,
-    PARAM_CV_OSC_DETUNE,
-    PARAM_CV_FILTER_CUTOFF,
-    PARAM_CV_FILTER_RESONANCE,
     PARAM_CV_RESONATOR_TUNE,
     PARAM_CV_RESONATOR_FEEDBACK,
+    PARAM_CV_FILTER_CUTOFF,
+    PARAM_CV_FILTER_RESONANCE,
     PARAM_CV_ECHO_REPEATS,
     PARAM_CV_ECHO_DENSITY,
     PARAM_CV_AMBIENCE_DECAY,
@@ -86,31 +61,14 @@ enum ParamCv {
 };
 
 const PatchParameterId paramCvMap[PARAM_CV_LAST] = {
-    PARAMETER_G,
-    PARAMETER_E,
-    PARAMETER_F,
-    PARAMETER_AD,
     PARAMETER_A,
-    PARAMETER_B,
-    PARAMETER_B,
-    PARAMETER_C,
-    PARAMETER_C,
+    PARAMETER_A,
     PARAMETER_D,
     PARAMETER_D,
-    PARAMETER_AC,
-    PARAMETER_AC,
-};
-
-enum ParamSwitch {
-    PARAM_SWITCH_RANDOM_MODE,
-    PARAM_SWITCH_RANDOM_AMOUNT,
-    PARAM_SWITCH_OSC_USE_SSWT,
-    PARAM_SWITCH_LAST,
-};
-
-const PatchParameterId paramSwitchMap[PARAM_SWITCH_LAST - 1] = {
-    PARAMETER_DH, // Random mode
-    PARAMETER_AA, // Random amount
+    PARAMETER_AA,
+    PARAMETER_AA,
+    PARAMETER_AB,
+    PARAMETER_AB,
 };
 
 enum ParamButton {
@@ -276,7 +234,7 @@ public:
         SetValue(previousValue_);
     }
 
-    inline void Randomize(RandomAmount amount, bool semitones = false)
+    inline void Randomize(float amount)
     {
         randomSeed_ ^= randomSeed_ << 13;
         randomSeed_ ^= randomSeed_ >> 17;
@@ -301,53 +259,16 @@ public:
         }
         else if (amount == RandomAmount::RANDOM_MID)
         {
-            if (semitones)
-            {
-                if (rf < 0.1f)
-                {
-                    v = *value_ + (0.083f * 4 * s2);
-                }
-                else if (rf < 0.5f)
-                {
-                    v = *value_ + (0.083f * 3 * s2);
-                }
-                else
-                {
-                    v = *value_ + (0.083f * 2 * s2);
-                }
-            }
-            else
-            {
-                v = *value_ + rf * 0.1f * s1;
-            }
+            v = *value_ + rf * 0.1f * s1;
         }
         else
         {
-            if (semitones)
-            {
-                if (rf < 0.1f)
-                {
-                    v = *value_ + (0.083f * 2 * s2);
-                }
-                else
-                {
-                    v = *value_ + 0.083f * s2;
-                }
-            }
-            else
-            {
-                v = *value_ + rf * 0.02f * s1;
-            }
+            v = *value_ + rf * 0.02f * s1;
         }
 
         v = Clamp(v, 0, 1);
 
-        if (semitones)
-        {
-            v = Quantize(v, 12);
-        }
-
-        SetValue(v, semitones ? patchState_->randomHasSlew : true);
+        SetValue(v, true);
     }
 
     inline void Realign()
@@ -580,14 +501,14 @@ public:
         lockableParams_[name].UndoRedo();
     }
 
-    inline void Randomize(RandomAmount amount, LockableParamName name = LockableParamName::PARAM_LOCKABLE_MAIN, bool semitones = false)
+    inline void Randomize(float amount, LockableParamName name = LockableParamName::PARAM_LOCKABLE_MAIN)
     {
         for (size_t i = 0; i < LockableParamName::PARAM_LOCKABLE_LAST; i++)
         {
             lockableParams_[i].Lock();
         }
-        lockableParams_[name].Randomize(amount, semitones);
-        lockableParams_[selectedParam_].Unlock(semitones ? patchState_->randomHasSlew : true);
+        lockableParams_[name].Randomize(amount);
+        lockableParams_[selectedParam_].Unlock(true);
     }
 
     inline void Reset()
@@ -875,97 +796,6 @@ public:
         }
 
         return catchUp_;
-    }
-};
-
-class SwitchController
-{
-private:
-    float* mainParam_;
-    float switchValue_;
-    float undoValue_;
-    float redoValue_;
-
-    bool canUndo_;
-    bool canRedo_;
-
-public:
-    SwitchController(float* mainParam)
-    {
-        mainParam_ = mainParam;
-        switchValue_ = 0.f;
-        undoValue_ = 0.f;
-        redoValue_ = 0.f;
-        canUndo_ = false;
-        canRedo_ = false;
-    }
-    ~SwitchController() {}
-
-    static SwitchController* create(float* mainParam)
-    {
-        return new SwitchController(mainParam);
-    }
-
-    static void destroy(SwitchController* obj)
-    {
-        delete obj;
-    }
-
-    inline void Set(float value)
-    {
-        switchValue_ = value;
-        *mainParam_ = switchValue_;
-    }
-
-    inline void UndoRedo()
-    {
-        if (canUndo_)
-        {
-            *mainParam_ = undoValue_;
-
-            canUndo_ = false;
-            canRedo_ = true;
-        }
-        else if (canRedo_)
-        {
-            *mainParam_ = redoValue_;
-
-            canUndo_ = true;
-            canRedo_ = false;
-        }
-    }
-
-    inline void Randomize(bool undoRedo = false)
-    {
-        if (undoRedo)
-        {
-            UndoRedo();
-        }
-        else
-        {
-            undoValue_ = *mainParam_;
-            redoValue_ = RandomFloat();
-            *mainParam_ = redoValue_;
-            canUndo_ = true;
-        }
-    }
-
-    inline void Reset()
-    {
-        *mainParam_ = switchValue_;
-    }
-
-    inline void Read(ParamSwitch swtch)
-    {
-        float v = getInitialisingPatchProcessor()->patch->getParameterValue(paramSwitchMap[swtch]);
-        if (v != switchValue_)
-        {
-            switchValue_ = v;
-            if (switchValue_ != *mainParam_)
-            {
-                *mainParam_ = switchValue_;
-            }
-        }
     }
 };
 
@@ -1666,6 +1496,150 @@ public:
             Set(!on_);
             samplesSincePressed_ = 0;
             samplesSinceHeld_ = 0;
+        }
+    }
+
+    // Called at block rate
+    inline void Process()
+    {
+        if (!on_)
+        {
+            return;
+        }
+
+        if (pressed_)
+        {
+            if (hold_)
+            {
+                if (samplesSinceHeld_ < kGateLimit)
+                {
+                    // Holding.
+                    samplesSinceHeld_++;
+                }
+                else
+                {
+                    gate_ = false;
+                }
+            }
+            else
+            {
+                if (samplesSincePressed_ < kGateLimit)
+                {
+                    // Holding.
+                    samplesSincePressed_++;
+                }
+                else
+                {
+                    hold_ = true;
+                    gate_ = true;
+                    samplesSinceHeld_ = 0;
+                }
+            }
+        }
+        else if (hold_)
+        {
+            // Released.
+            Set(!on_);
+            hold_ = false;
+            gate_ = false;
+        }
+    }
+};
+
+class RandomMapButtonController
+{
+private:
+    Led* led_;
+    FuncMode funcMode_;
+
+    bool on_;
+    bool latched_;
+    bool hold_;
+    bool pressed_;
+    bool trig_;
+    bool gate_;
+
+    int samplesSincePressed_;
+    int samplesSinceHeld_;
+
+public:
+    RandomMapButtonController(Led* led)
+    {
+        led_ = led;
+
+        funcMode_ = FuncMode::FUNC_MODE_NONE;
+
+        on_ = false;
+        hold_ = false;
+        pressed_ = false;
+        trig_ = false;
+
+        samplesSincePressed_ = 0;
+        samplesSinceHeld_ = 0;
+    }
+    ~RandomMapButtonController() {}
+
+    static RandomMapButtonController* create(Led* led)
+    {
+        return new RandomMapButtonController(led);
+    }
+
+    static void destroy(RandomMapButtonController* obj)
+    {
+        delete obj;
+    }
+
+    inline bool IsOn()
+    {
+        return on_;
+    }
+
+    // True when the button is pressed, false when released.
+    inline bool IsPressed()
+    {
+        return pressed_;
+    }
+
+    // True when the button is being kept pressed for some time, false when released.
+    inline bool IsHeld()
+    {
+        return hold_;
+    }
+
+    // True when the button is being kept pressed for some time, false after a little more.
+    inline bool IsGate()
+    {
+        return gate_;
+    }
+
+    inline void Set(bool on)
+    {
+        on_ = on;
+        led_->Set(on_);
+    }
+
+    inline void Trig(bool pressed)
+    {
+        pressed_ = pressed;
+
+        // Act only when the led button is pressed.
+        if (pressed_)
+        {
+            Set(!on_);
+            samplesSincePressed_ = 0;
+            samplesSinceHeld_ = 0;
+        }
+    }
+
+    inline void SetFuncMode(FuncMode funcMode)
+    {
+        // Set func mode only if the led button isn't pressed.
+        if (!pressed_)
+        {
+            funcMode_ = funcMode;
+            hold_ = false;
+            trig_ = false;
+            Set(on_);
         }
     }
 

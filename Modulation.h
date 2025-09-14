@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Commons.h"
+#include "RampOscillator.h"
+#include "SquareWaveOscillator.h"
 #include "MorphingOscillator.h"
 #include "NoiseOscillator.h"
 #include "LorenzAttractor.h"

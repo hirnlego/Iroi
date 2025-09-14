@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TGate.h"
 #include "Commons.h"
 
 static const int BLINK_LIMIT = 75; // 50ms (1500 = 1s)
@@ -10,10 +11,8 @@ enum LedName
     LED_INPUT_PEAK,
     LED_SYNC,
     LED_MOD,
-    LED_RECORD,
     LED_RANDOM,
-    LED_ARROW_LEFT,
-    LED_ARROW_RIGHT,
+    LED_RANDOM_MAP,
     LED_SHIFT,
     LED_MOD_AMOUNT,
     LED_CV_AMOUNT,

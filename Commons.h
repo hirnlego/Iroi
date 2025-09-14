@@ -27,20 +27,15 @@
         out += (error > 0 ? positive : negative) * error; \
     }
 
-#define SHIFT_BUTTON PUSHBUTTON
-#define LEFT_ARROW_PARAM GREEN_BUTTON
-#define RIGHT_ARROW_PARAM RED_BUTTON
-#define RECORD_BUTTON BUTTON_1
-#define RECORD_IN BUTTON_2
-#define RANDOM_BUTTON BUTTON_3
-#define RANDOM_IN BUTTON_4
-#define SYNC_IN BUTTON_5
-#define INPUT_PEAK_LED_PARAM BUTTON_6
-#define PREPOST_SWITCH BUTTON_7
-#define SSWT_SWITCH BUTTON_8
-#define MOD_CV_GREEN_LED_PARAM BUTTON_9
-#define MOD_CV_RED_LED_PARAM BUTTON_10
-#define MOD_CV_BUTTON BUTTON_11
+#define MOD_CV_BUTTON PUSHBUTTON
+#define MOD_CV_GREEN_LED_PARAM GREEN_BUTTON
+#define MOD_CV_RED_LED_PARAM RED_BUTTON
+#define RANDOM_BUTTON BUTTON_1
+#define RANDOM_MAP BUTTON_2
+#define RANDOM_IN BUTTON_3
+#define SYNC_IN BUTTON_4
+#define INPUT_PEAK_LED_PARAM BUTTON_5
+#define SHIFT_BUTTON BUTTON_6
 
 #define INPUT_LED_PARAM PARAMETER_AF
 #define MOD_LED_PARAM PARAMETER_AG
@@ -69,55 +64,19 @@ constexpr int kRandomSlewSamples = 128;
 constexpr float kA4Freq = 440.f;
 constexpr int kA4Note = 69;
 constexpr float kSemi4Oct = 12;
-constexpr float kOscFreqMin = 16.35f; // C0
-constexpr float kOscFreqMax = 8219.f; // C9
-
-constexpr size_t kLooperInterpolationBlocks = 4; // This number * block size = samples
-constexpr int kLooperLoopLengthMin = 367; // Almost C3 (48000 / 130.81f)
-constexpr int kLooperFadeSamples = 2400; // 50ms @ audio rate
-static const float kLooperFadeSamplesR = 1.f / kLooperFadeSamples;
-constexpr int kLooperTriggerFadeSamples = 240; // 5ms @ audio rate
-static const float kLooperTriggerFadeSamplesR = 1.f / kLooperTriggerFadeSamples;
-static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
-//static const int32_t kLooperTotalBufferLength = 480000; // samples for both channels (interleaved) = ~8 seconds stereo buffer
-static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
-constexpr float kLooperNoiseLevel = 0.2f;
-constexpr float kLooperInputGain = 1.f;
-constexpr float kLooperResampleGain = 1.f;
-constexpr float kLooperResampleLedAtt = 1.f;
-constexpr float kLooperMakeupGain = 1.3f;
-constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
-static const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
-static const int32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
-
-constexpr float kRecordOnsetLevel = 0.005f;
-constexpr float kRecordWindupLevel = 0.00001f;
-constexpr int kRecordGateLimit = 375; // 250ms (1500 = 1s @ block rate)
-constexpr int kRecordOnsetLimit = 375; // 250ms (1500 = 1s @ block rate)
-
-constexpr int kWaveTableLength = 2048;
-constexpr int kWaveTableNofTables = 32;
-static const int kWaveTableStepLength = kLooperChannelBufferLength / kWaveTableNofTables;
-static const float kWaveTableNofTablesR = 1.f / kWaveTableNofTables;
 
 // When internally clocked, base frequency is ~0.18Hz
 // When externally clocked, min bpm is 30 (0.5Hz), max is 300 (5Hz)
 constexpr float kClockFreqMin = 0.01f;
 constexpr float kClockFreqMax = 80.f;
 constexpr int kExternalClockLimit = 3000; // Samples required to detect a steady external clock - 2s (1500 = 1s @ block rate)
-static const float kInternalClockFreq = (48000.f / kLooperChannelBufferLength);
+constexpr float kInternalClockSamples = 240000.f; // 5 seconds
+static const float kInternalClockFreq = 48000.f / kInternalClockSamples;
 constexpr int kClockNofRatios = 17;
 constexpr int kClockUnityRatioIndex = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
 constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples required to detect a change
-
-constexpr float kOScSineGain = 0.3f;
-static const float kOscSineFadeInc = 1.f / 2400;
-constexpr float kOScSuperSawGain = 0.4f;
-constexpr float kOScWaveTablePreGain = 6.f;
-constexpr float kOScWaveTableGain = 0.3f;
-constexpr float kSourcesMakeupGain = 0.2f;
 
 constexpr float kDjFilterMakeupGainMin = 1.f;
 constexpr float kDjFilterMakeupGainMax = 1.4f;
@@ -183,88 +142,59 @@ constexpr int kHoldLimit = 75; // Samples waited for a pressed button to be cons
 
 struct PatchCtrls
 {
-    float inputVol;
-
-    float looperVol;
-    float looperSos;
-    float looperFilter;
-    float looperSpeed;
-    float looperSpeedModAmount;
-    float looperSpeedCvAmount;
-    float looperStart;
-    float looperStartModAmount;
-    float looperStartCvAmount;
-    float looperLength;
-    float looperLengthModAmount;
-    float looperLengthCvAmount;
-    float looperRecording;
-    float looperResampling;
-
-    float osc1Vol;
-    float osc2Vol;
-    float oscOctave;
-    float oscUnison;
-    float oscPitch;
-    float oscPitchModAmount;
-    float oscPitchCvAmount;
-    float oscDetune;
-    float oscDetuneModAmount;
-    float oscDetuneCvAmount;
-    float oscUseWavetable;
-
     float filterVol;
     float filterMode;
     float filterNoiseLevel;
     float filterCutoff;
     float filterCutoffModAmount;
     float filterCutoffCvAmount;
+    float filterCutoffRndAmount;
     float filterResonance;
     float filterResonanceModAmount;
     float filterResonanceCvAmount;
+    float filterResonanceRndAmount;
     float filterPosition;
 
     float resonatorVol;
     float resonatorTune;
     float resonatorTuneModAmount;
     float resonatorTuneCvAmount;
+    float resonatorTuneRndAmount;
     float resonatorFeedback;
     float resonatorFeedbackModAmount;
     float resonatorFeedbackCvAmount;
+    float resonatorFeedbackRndAmount;
     float resonatorDissonance;
 
     float echoVol;
     float echoRepeats;
     float echoRepeatsModAmount;
     float echoRepeatsCvAmount;
+    float echoRepeatsRndAmount;
     float echoDensity;
     float echoDensityModAmount;
     float echoDensityCvAmount;
+    float echoDensityRndAmount;
     float echoFilter;
 
     float ambienceVol;
     float ambienceDecay;
     float ambienceDecayModAmount;
     float ambienceDecayCvAmount;
+    float ambienceDecayRndAmount;
     float ambienceSpacetime;
     float ambienceSpacetimeModAmount;
     float ambienceSpacetimeCvAmount;
+    float ambienceSpacetimeRndAmount;
     float ambienceAutoPan;
 
     float modLevel;
     float modSpeed;
     float modType;
-
-    float randomMode;
-    float randomAmount;
 };
 
 struct PatchCvs
 {
-    float looperSpeed;
-    float looperStart;
-    float looperLength;
-    float oscPitch;
-    float oscDetune;
     float filterCutoff;
     float filterResonance;
     float resonatorTune;
@@ -281,6 +211,7 @@ enum FuncMode
     FUNC_MODE_ALT,
     FUNC_MODE_MOD,
     FUNC_MODE_CV,
+    FUNC_MODE_RND,
     FUNC_MODE_LAST
 };
 
@@ -288,16 +219,6 @@ enum ClockSource
 {
     CLOCK_SOURCE_INTERNAL,
     CLOCK_SOURCE_EXTERNAL,
-};
-
-enum StartupPhase
-{
-    STARTUP_1,
-    STARTUP_2,
-    STARTUP_3,
-    STARTUP_4,
-    STARTUP_5,
-    STARTUP_DONE,
 };
 
 struct PatchState
@@ -320,22 +241,12 @@ struct PatchState
     bool clockTick;
     size_t clockSamples;
 
-    bool clearLooperFlag;
-    bool oscPitchCenterFlag;
-    bool oscUnisonCenterFlag;
-    bool oscOctaveFlag;
-    bool looperSpeedLockFlag;
     bool modTypeLockFlag;
     bool modSpeedLockFlag;
     bool filterModeFlag;
     bool filterPositionFlag;
 
-    bool moving[23];
-
-    float c2;
-    float c5;
-    float pitchZero;
-    float speedZero;
+    bool moving[14];
 
     float outLevel;
     float randomSlew;
@@ -346,8 +257,6 @@ struct PatchState
     bool cvAttenuverters;
 
     FuncMode funcMode;
-
-    StartupPhase startupPhase;
 };
 
 inline bool AreEquals(float val1, float val2, float d = kEps)

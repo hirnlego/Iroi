@@ -24,7 +24,7 @@ public:
 
         clockSource_ = ClockSource::CLOCK_SOURCE_EXTERNAL;
 
-        patchState_->tempo = TapTempo::create(patchState_->blockRate, kLooperChannelBufferLength);
+        patchState_->tempo = TapTempo::create(patchState_->blockRate, kInternalClockSamples);
         patchState_->tempo->setFrequency(kInternalClockFreq);
         samplesSinceSyncIn_ = kExternalClockLimit;
     }

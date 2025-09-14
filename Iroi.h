@@ -1,15 +1,10 @@
 #pragma once
 
 #include "Commons.h"
-#include "WaveTableBuffer.h"
-#include "StereoSineOscillator.h"
-#include "StereoSuperSaw.h"
-#include "StereoWaveTableOscillator.h"
 #include "Ambience.h"
 #include "Filter.h"
 #include "Resonator.h"
 #include "Echo.h"
-#include "Looper.h"
 #include "Schmitt.h"
 #include "TGate.h"
 #include "EnvFollower.h"
@@ -25,15 +20,10 @@ private:
     PatchCvs* patchCvs_;
     PatchState* patchState_;
 
-    StereoSineOscillator* sine_;
-    StereoSuperSaw* saw_;
-    StereoWaveTableOscillator* wt_;
-    WaveTableBuffer* wtBuffer_;
     Filter* filter_;
     Resonator* resonator_;
     Echo* echo_;
     Ambience* ambience_;
-    Looper* looper_;
     Limiter* limiter_;
 
     Modulation* modulation_;
@@ -56,13 +46,6 @@ public:
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
         patchState_ = patchState;
-
-        looper_ = Looper::create(patchCtrls_, patchCvs_, patchState_);
-        wtBuffer_ = WaveTableBuffer::create(looper_->GetBuffer());
-
-        sine_ = StereoSineOscillator::create(patchCtrls_, patchCvs_, patchState_);
-        saw_ = StereoSuperSaw::create(patchCtrls_, patchCvs_, patchState_);
-        wt_ = StereoWaveTableOscillator::create(patchCtrls_, patchCvs_, patchState_, wtBuffer_);
 
         filter_ = Filter::create(patchCtrls_, patchCvs_, patchState_);
         resonator_ = Resonator::create(patchCtrls_, patchCvs_, patchState_);
@@ -93,11 +76,6 @@ public:
         AudioBuffer::destroy(resample_);
         AudioBuffer::destroy(osc1Out_);
         AudioBuffer::destroy(osc2Out_);
-        WaveTableBuffer::destroy(wtBuffer_);
-        Looper::destroy(looper_);
-        StereoSineOscillator::destroy(sine_);
-        StereoSuperSaw::destroy(saw_);
-        StereoWaveTableOscillator::destroy(wt_);
         Filter::destroy(filter_);
         Resonator::destroy(resonator_);
         Echo::destroy(echo_);
@@ -133,39 +111,15 @@ public:
         // Input leds.
         for (size_t i = 0; i < size; i++)
         {
-            float l;
-            if (patchCtrls_->looperResampling)
-            {
-                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i])) * kLooperResampleLedAtt;
-            }
-            else
-            {
-                l = Mix2(inEnvFollower_[0]->process(left[i]), inEnvFollower_[1]->process(right[i]));
-            }
+            float l = Mix2(inEnvFollower_[0]->process(left[i]), inEnvFollower_[1]->process(right[i]));
+            
             patchState_->inputLevel[i] = l;
         }
 
         modulation_->Process();
 
         input_->copyFrom(buffer);
-        input_->multiply(patchCtrls_->inputVol);
-
-        if (patchCtrls_->looperResampling)
-        {
-            looper_->Process(*resample_, buffer);
-        }
-        else
-        {
-            looper_->Process(buffer, buffer);
-        }
         buffer.add(*input_);
-
-        sine_->Process(*osc1Out_);
-        buffer.add(*osc1Out_);
-        patchCtrls_->oscUseWavetable > 0.5f ? wt_->Process(*osc2Out_) : saw_->Process(*osc2Out_);
-        buffer.add(*osc2Out_);
-
-        buffer.multiply(kSourcesMakeupGain);
 
         if (patchCtrls_->filterPosition < 0.25f)
         {
@@ -219,16 +173,8 @@ public:
         buffer.multiply(kOutputMakeupGain);
         limiter_->ProcessSoft(buffer, buffer);
 
-        if (StartupPhase::STARTUP_DONE == patchState_->startupPhase)
-        {
-            buffer.multiply(patchState_->outLevel);
-        }
-        else
-        {
-            // TODO: Fade in
-            buffer.clear();
-        }
-
+        buffer.multiply(patchState_->outLevel);
+        
         resample_->copyFrom(buffer);
     }
 };
