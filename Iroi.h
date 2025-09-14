@@ -18,7 +18,7 @@
 #include "Modulation.h"
 #include "Limiter.h"
 
-class Oneiroi
+class Iroi
 {
 private:
     PatchCtrls* patchCtrls_;
@@ -51,7 +51,7 @@ private:
     FilterPosition filterPosition_, lastFilterPosition_;
 
 public:
-    Oneiroi(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
+    Iroi(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
@@ -87,7 +87,7 @@ public:
         inputDcFilter_ = StereoDcBlockingFilter::create();
         outputDcFilter_ = StereoDcBlockingFilter::create();
     }
-    ~Oneiroi()
+    ~Iroi()
     {
         AudioBuffer::destroy(input_);
         AudioBuffer::destroy(resample_);
@@ -111,12 +111,12 @@ public:
         }
     }
 
-    static Oneiroi* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
+    static Iroi* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
     {
-        return new Oneiroi(patchCtrls, patchCvs, patchState);
+        return new Iroi(patchCtrls, patchCvs, patchState);
     }
 
-    static void destroy(Oneiroi* obj)
+    static void destroy(Iroi* obj)
     {
         delete obj;
     }

@@ -1,14 +1,14 @@
-#ifndef __Oneiroi_1_2_0Patch_hpp__
-#define __Oneiroi_1_2_0Patch_hpp__
+#ifndef __Iroi_1_0_0Patch_hpp__
+#define __Iroi_1_0_0Patch_hpp__
 
 #include "Commons.h"
 #include "Ui.h"
 #include "Clock.h"
 
-class Oneiroi_1_2_0Patch : public Patch {
+class Iroi_1_0_0Patch : public Patch {
 private:
     Ui* ui_;
-    Oneiroi* oneiroi_;
+    Iroi* iroi_;
     Clock* clock_;
 
     PatchCtrls patchCtrls;
@@ -16,18 +16,18 @@ private:
     PatchState patchState;
 
 public:
-    Oneiroi_1_2_0Patch()
+    Iroi_1_0_0Patch()
     {
         patchState.sampleRate = getSampleRate();
         patchState.blockRate = getBlockRate();
         patchState.blockSize = getBlockSize();
         ui_ = Ui::create(&patchCtrls, &patchCvs, &patchState);
-        oneiroi_ = Oneiroi::create(&patchCtrls, &patchCvs, &patchState);
+        iroi_ = Iroi::create(&patchCtrls, &patchCvs, &patchState);
         clock_ = Clock::create(&patchCtrls, &patchState);
     }
-    ~Oneiroi_1_2_0Patch()
+    ~Iroi_1_0_0Patch()
     {
-        Oneiroi::destroy(oneiroi_);
+        Iroi::destroy(iroi_);
         Ui::destroy(ui_);
         Clock::destroy(clock_);
     }
@@ -46,8 +46,8 @@ public:
     {
         clock_->Process();
         ui_->Poll();
-        oneiroi_->Process(buffer);
+        iroi_->Process(buffer);
     }
 };
 
-#endif // __Oneiroi_1_2_0Patch_hpp__
+#endif // __Iroi_1_0_0Patch_hpp__

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Oneiroi.h"
+#include "Iroi.h"
 #include "ParamController.h"
 #include "Midi.h"
 #include "Led.h"
@@ -714,7 +714,7 @@ public:
         getInitialisingPatchProcessor()->patch->sendMidi(
             MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
 
-        // Send the file index - 0: "oneiroi.prm", 1: "oneiroi.alt", 2: "oneiroi.mod", 3: "oneiroi.cv"
+        // Send the file index - 0: "iroi.prm", 1: "iroi.alt", 2: "iroi.mod", 3: "iroi.cv"
         getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cp(0, funcMode));
 
         for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++) {
