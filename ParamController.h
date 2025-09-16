@@ -31,6 +31,8 @@ const PatchParameterId paramKnobMap[PARAM_KNOB_LAST] = {
     PARAMETER_BF,
     PARAMETER_BG,
     PARAMETER_BH,
+    PARAMETER_H,
+    PARAMETER_AA,
 };
 
 enum ParamFader {
@@ -42,10 +44,10 @@ enum ParamFader {
 };
 
 const PatchParameterId paramFaderMap[PARAM_FADER_LAST] = {
-    PARAMETER_F,
-    PARAMETER_G,
-    PARAMETER_H,
-    PARAMETER_AC,
+    PARAMETER_A,
+    PARAMETER_B,
+    PARAMETER_C,
+    PARAMETER_D,
 };
 
 enum ParamCv {
@@ -61,14 +63,14 @@ enum ParamCv {
 };
 
 const PatchParameterId paramCvMap[PARAM_CV_LAST] = {
-    PARAMETER_A,
-    PARAMETER_A,
-    PARAMETER_D,
-    PARAMETER_D,
-    PARAMETER_AA,
-    PARAMETER_AA,
+    PARAMETER_G,
+    PARAMETER_G,
     PARAMETER_AB,
     PARAMETER_AB,
+    PARAMETER_F,
+    PARAMETER_F,
+    PARAMETER_E,
+    PARAMETER_E,
 };
 
 enum ParamButton {
@@ -98,6 +100,7 @@ enum LockableParamName {
     PARAM_LOCKABLE_ALT,
     PARAM_LOCKABLE_MOD,
     PARAM_LOCKABLE_CV,
+    PARAM_LOCKABLE_RND,
     PARAM_LOCKABLE_LAST
 };
 
@@ -128,7 +131,6 @@ private:
 
     bool bipolar_;
     bool active_;
-    bool softTakeover_;
 
 public:
     LockableParam() {}
@@ -151,7 +153,6 @@ public:
         }
         bipolar_ = bipolar;
         active_ = active;
-        softTakeover_ = patchState->softTakeover;
         randomSeed_ = rand();
         slewInc_ = 0;
 
@@ -351,24 +352,9 @@ public:
             case PARAM_STATE_CATCHING_UP:
                 {
                     float d = ctrlValue_ - storedValue_;
-                    if (softTakeover_)
+                    if (moving)
                     {
-                        if (fabsf(d) > kParamCatchUpDelta)
-                        {
-                            /// Still needs to catch up.
-                            catchUp_ = d > 0 ? ParamCatchUp::PARAM_CATCH_UP_LEFT : ParamCatchUp::PARAM_CATCH_UP_RIGHT;
-                        }
-                        else
-                        {
-                            // Done catching up.
-                            state_ = PARAM_STATE_TRACKING;
-                            catchUp_ = ParamCatchUp::PARAM_CATCH_UP_DONE;
-                        }
-                    }
-                    else if (moving)
-                    {
-                        // Just catch up if soft takeover is disabled and
-                        // the control is moving.
+                        // Just catch up if the control is moving.
                         state_ = PARAM_STATE_TRACKING;
                         catchUp_ = ParamCatchUp::PARAM_CATCH_UP_DONE;
                     }

@@ -31,11 +31,12 @@
 #define MOD_CV_GREEN_LED_PARAM GREEN_BUTTON
 #define MOD_CV_RED_LED_PARAM RED_BUTTON
 #define RANDOM_BUTTON BUTTON_1
-#define RANDOM_MAP BUTTON_2
+#define RANDOM_MAP_BUTTON BUTTON_2
 #define RANDOM_IN BUTTON_3
 #define SYNC_IN BUTTON_4
 #define INPUT_PEAK_LED_PARAM BUTTON_5
 #define SHIFT_BUTTON BUTTON_6
+#define IN_DETEC BUTTON_7
 
 #define INPUT_LED_PARAM PARAMETER_AF
 #define MOD_LED_PARAM PARAMETER_AG
@@ -64,6 +65,11 @@ constexpr int kRandomSlewSamples = 128;
 constexpr float kA4Freq = 440.f;
 constexpr int kA4Note = 69;
 constexpr float kSemi4Oct = 12;
+
+static const uint16_t kInDetecSequence[32] = {
+    UINT16_MAX, 0, 0, 0, UINT16_MAX, UINT16_MAX, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX, UINT16_MAX, 0, UINT16_MAX,
+    0, UINT16_MAX, UINT16_MAX, UINT16_MAX, 0, 0, 0, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX, 0, 0, UINT16_MAX, 0
+};
 
 // When internally clocked, base frequency is ~0.18Hz
 // When externally clocked, min bpm is 30 (0.5Hz), max is 300 (5Hz)
@@ -252,7 +258,6 @@ struct PatchState
     float randomSlew;
 
     bool randomHasSlew;
-    bool softTakeover;
     bool modAttenuverters;
     bool cvAttenuverters;
 

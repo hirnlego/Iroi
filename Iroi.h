@@ -111,15 +111,10 @@ public:
         // Input leds.
         for (size_t i = 0; i < size; i++)
         {
-            float l = Mix2(inEnvFollower_[0]->process(left[i]), inEnvFollower_[1]->process(right[i]));
-            
-            patchState_->inputLevel[i] = l;
+            patchState_->inputLevel[i] = Mix2(inEnvFollower_[0]->process(left[i]), inEnvFollower_[1]->process(right[i]));
         }
 
         modulation_->Process();
-
-        input_->copyFrom(buffer);
-        buffer.add(*input_);
 
         if (patchCtrls_->filterPosition < 0.25f)
         {

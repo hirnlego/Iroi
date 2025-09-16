@@ -17,7 +17,6 @@ enum FuncState {
 };
 
 struct Configuration {
-    bool soft_takeover;
     bool mod_attenuverters;
     bool cv_attenuverters;
     int revision;
@@ -101,7 +100,6 @@ public:
         patchState_->outLevel = 1.f;
         patchState_->randomSlew = kRandomSlewSamples;
         patchState_->randomHasSlew = false;
-        patchState_->softTakeover = false;
         patchState_->modAttenuverters = false;
         patchState_->cvAttenuverters = false;
 
@@ -203,6 +201,7 @@ public:
         leds_[LED_SYNC] = Led::create(SYNC_IN);
         leds_[LED_MOD] = Led::create(MOD_LED_PARAM, LedType::LED_TYPE_PARAM);
         leds_[LED_RANDOM] = Led::create(RANDOM_BUTTON);
+        leds_[LED_RANDOM_MAP] = Led::create(RANDOM_MAP_BUTTON);
         leds_[LED_SHIFT] = Led::create(SHIFT_BUTTON);
         leds_[LED_MOD_AMOUNT] = Led::create(MOD_CV_RED_LED_PARAM);
         leds_[LED_CV_AMOUNT] = Led::create(MOD_CV_GREEN_LED_PARAM);
@@ -267,8 +266,7 @@ public:
         randomMapButton_ = RandomMapButtonController::create(leds_[LED_RANDOM_MAP]);
         randomButton_ = RandomButtonController::create(leds_[LED_RANDOM]);
         shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
-        modCvButton_ = ModCvButtonController::create(
-            leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
+        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
     }
     ~Ui() {
         FloatArray::destroy(patchState_->inputLevel);
@@ -308,7 +306,6 @@ public:
         Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".cfg");
         if (resource) {
             Configuration* configuration = (Configuration*)resource->getData();
-            patchState_->softTakeover = configuration->soft_takeover;
             patchState_->modAttenuverters = configuration->mod_attenuverters;
             patchState_->cvAttenuverters = configuration->cv_attenuverters;
             hwRevision_ = configuration->revision;
@@ -317,7 +314,6 @@ public:
         {
             // Sensible default values (the same are set in the firmware).
             hwRevision_ = 0;
-            patchState_->softTakeover = false;
             patchState_->modAttenuverters = false;
             patchState_->cvAttenuverters = false;
         }
@@ -332,8 +328,8 @@ public:
             knobs_[PARAM_KNOB_ECHO_DENSITY]->SetValue(cfg[1] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Echo filter
             knobs_[PARAM_KNOB_FILTER_RESONANCE]->SetValue(cfg[2] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Filter position
             knobs_[PARAM_KNOB_FILTER_CUTOFF]->SetValue(cfg[3] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Filter mode
-            knobs_[PARAM_KNOB_MOD_SPEED]->SetValue(cfg[6] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Mod type
-            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[9] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Reso dissonance
+            knobs_[PARAM_KNOB_MOD_SPEED]->SetValue(cfg[4] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Mod type
+            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[5] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Reso dissonance
         }
         Resource::destroy(resource);
     }
@@ -348,8 +344,8 @@ public:
             knobs_[PARAM_KNOB_ECHO_REPEATS]->SetValue(cfg[3] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Echo repeats mod amount
             knobs_[PARAM_KNOB_FILTER_CUTOFF]->SetValue(cfg[4] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Filter cutoff mod amount
             knobs_[PARAM_KNOB_FILTER_RESONANCE]->SetValue(cfg[5] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Filter resonance mod amount
-            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[11] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Resonator feedback mod amount
-            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[12] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Resonator tune mod amount
+            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[6] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Resonator feedback mod amount
+            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[7] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Resonator tune mod amount
         }
         Resource::destroy(resource);
     }
@@ -364,8 +360,24 @@ public:
             knobs_[PARAM_KNOB_ECHO_REPEATS]->SetValue(cfg[3] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Echo repeats cv amount
             knobs_[PARAM_KNOB_FILTER_CUTOFF]->SetValue(cfg[4] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Filter cutoff cv amount
             knobs_[PARAM_KNOB_FILTER_RESONANCE]->SetValue(cfg[5] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Filter resonance cv amount
-            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[11] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Resonator feedback cv amount
-            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[12] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Resonator tune cv amount
+            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[6] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Resonator feedback cv amount
+            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[7] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Resonator tune cv amount
+        }
+        Resource::destroy(resource);
+    }
+
+    void LoadRndParams() {
+        Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".rnd");
+        if (resource) {
+            int16_t* cfg = (int16_t*)resource->getData();
+            knobs_[PARAM_KNOB_AMBIENCE_DECAY]->SetValue(cfg[0] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Ambience decay random amount
+            knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->SetValue(cfg[1] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Ambience spacetime random amount
+            knobs_[PARAM_KNOB_ECHO_DENSITY]->SetValue(cfg[2] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Echo density random amount
+            knobs_[PARAM_KNOB_ECHO_REPEATS]->SetValue(cfg[3] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Echo repeats random amount
+            knobs_[PARAM_KNOB_FILTER_CUTOFF]->SetValue(cfg[4] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Filter cutoff random amount
+            knobs_[PARAM_KNOB_FILTER_RESONANCE]->SetValue(cfg[5] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Filter resonance random amount
+            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[6] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Resonator feedback random amount
+            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[7] / 8192.f, LockableParamName::PARAM_LOCKABLE_RND); // Resonator tune random amount
         }
         Resource::destroy(resource);
     }
@@ -380,10 +392,10 @@ public:
             knobs_[PARAM_KNOB_ECHO_REPEATS]->SetValue(cfg[3] / 8192.f); // Echo repeats
             knobs_[PARAM_KNOB_FILTER_CUTOFF]->SetValue(cfg[4] / 8192.f); // Filter cutoff
             knobs_[PARAM_KNOB_FILTER_RESONANCE]->SetValue(cfg[5] / 8192.f); // Filter resonance
-            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[11] / 8192.f); // Resonator feedback
-            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[12] / 8192.f); // Resonator tune
-            knobs_[PARAM_KNOB_MOD_LEVEL]->SetValue(cfg[13] / 8192.f); // Mod level
-            knobs_[PARAM_KNOB_MOD_SPEED]->SetValue(cfg[14] / 8192.f); // Mod speed
+            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[6] / 8192.f); // Resonator feedback
+            knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[7] / 8192.f); // Resonator tune
+            knobs_[PARAM_KNOB_MOD_LEVEL]->SetValue(cfg[8] / 8192.f); // Mod level
+            knobs_[PARAM_KNOB_MOD_SPEED]->SetValue(cfg[9] / 8192.f); // Mod speed
         }
         Resource::destroy(resource);
     }
@@ -431,14 +443,14 @@ public:
             values[7] = patchCtrls_->resonatorTuneCvAmount;
             break;
         case FUNC_MODE_RND:
-            values[0] = patchCtrls_->ambienceDecayCvAmount;
-            values[1] = patchCtrls_->ambienceSpacetimeCvAmount;
-            values[2] = patchCtrls_->echoDensityCvAmount;
-            values[3] = patchCtrls_->echoRepeatsCvAmount;
-            values[4] = patchCtrls_->filterCutoffCvAmount;
-            values[5] = patchCtrls_->filterResonanceCvAmount;
-            values[6] = patchCtrls_->resonatorFeedbackCvAmount;
-            values[7] = patchCtrls_->resonatorTuneCvAmount;
+            values[0] = patchCtrls_->ambienceDecayRndAmount;
+            values[1] = patchCtrls_->ambienceSpacetimeRndAmount;
+            values[2] = patchCtrls_->echoDensityRndAmount;
+            values[3] = patchCtrls_->echoRepeatsRndAmount;
+            values[4] = patchCtrls_->filterCutoffRndAmount;
+            values[5] = patchCtrls_->filterResonanceRndAmount;
+            values[6] = patchCtrls_->resonatorFeedbackRndAmount;
+            values[7] = patchCtrls_->resonatorTuneRndAmount;
             break;
 
         default:
@@ -495,8 +507,13 @@ public:
                 }
             }
             break;
+
         case RANDOM_BUTTON:
             randomButton_->Trig(on);
+            break;
+
+        case RANDOM_MAP_BUTTON:
+            randomMapButton_->Trig(on);
             break;
 
         case SHIFT_BUTTON:
@@ -505,6 +522,10 @@ public:
 
         case MOD_CV_BUTTON:
             modCvButton_->Trig(on);
+            break;
+
+        case IN_DETEC:
+            debugMessage("Detec");
             break;
 
         default:
@@ -574,7 +595,7 @@ public:
                 leds_[shiftButton_->IsOn() ? LED_CV_AMOUNT : LED_MOD_AMOUNT]->Off();
             }
         }
-        else if (shiftButton_->IsOn() && !modCvButton_->IsOn()) {
+        else if (shiftButton_->IsOn() && !modCvButton_->IsOn() && !randomMapButton_->IsOn()) {
             // Only SHIFT button is on.
             if (saveFlag_) {
                 // Saving button has been released.
@@ -600,7 +621,7 @@ public:
                 wasCvMap_ = false;
             }
         }
-        else if (!shiftButton_->IsOn() && modCvButton_->IsOn()) {
+        else if (modCvButton_->IsOn() && !shiftButton_->IsOn() && !randomMapButton_->IsOn()) {
             // Only MOD/CV button is on.
             if (wasCvMap_) {
                 // If we were editing CV mapping and SHIFT button turns off,
@@ -614,13 +635,18 @@ public:
                 funcMode = FuncMode::FUNC_MODE_MOD;
             }
         }
-        else if (shiftButton_->IsOn() && modCvButton_->IsOn()) {
+        else if (shiftButton_->IsOn() && modCvButton_->IsOn() && !randomMapButton_->IsOn()) {
             // Both SHIFT and MOD/CV buttons are on.
             funcMode = FuncMode::FUNC_MODE_CV;
             wasCvMap_ = true;
         }
-        else if (!shiftButton_->IsOn() && !modCvButton_->IsOn()) {
-            // Neither SHIFT nor MOD/CV buttons are on.
+        else if (randomMapButton_->IsOn() && !shiftButton_->IsOn() && !modCvButton_->IsOn()) {
+            // Only RANDOM_MAP_BUTTON button is on.
+            funcMode = FuncMode::FUNC_MODE_RND;
+            wasCvMap_ = true;
+        }
+        else if (!shiftButton_->IsOn() && !modCvButton_->IsOn() && !randomMapButton_->IsOn()) {
+            // Neither SHIFT, MOD/CV nor RANDOM_MAP_BUTTON buttons are on.
             if (saveFlag_) {
                 // Saving button has been released.
                 saveFlag_ = false;
@@ -703,6 +729,42 @@ public:
         }
     }
 
+    void HandleInDetec() 
+    {
+        /*
+        bool expected_value = normalization_probe_state_ >> 31;
+        for (int i = 0; i < kNumNormalizedChannels; ++i) {
+            CvAdcChannel channel = normalized_channels_[i];
+            bool read_value = cv_adc_.value(channel) < \
+            settings_->calibration_data(channel).normalization_detection_threshold;
+            if (expected_value != read_value) {
+                ++normalization_detection_mismatches_[i];
+            }
+        }
+        
+        ++normalization_detection_count_;
+        if (normalization_detection_count_ == kProbeSequenceDuration) {
+            normalization_detection_count_ = 0;
+            bool* destination = &modulations_->frequency_patched;
+            for (int i = 0; i < kNumNormalizedChannels; ++i) {
+                destination[i] = normalization_detection_mismatches_[i] >= 2;
+                normalization_detection_mismatches_[i] = 0;
+            }
+        }
+        
+        normalization_probe_state_ = 1103515245 * normalization_probe_state_ + 12345;
+        normalization_probe_.Write(normalization_probe_state_ >> 31);
+        
+        */
+    
+        static int i = 0;
+        getInitialisingPatchProcessor()->patch->setButton(IN_DETEC, kInDetecSequence[i], 0);
+        i++;
+        if (i >= 32) {
+            i = 0;
+        }
+    }
+    
     void UndoRedo() {
         /*
         if (RandomMode::RANDOM_EFFECTS == randomMode_ || RandomMode::RANDOM_ALL == randomMode_) 
@@ -747,6 +809,7 @@ public:
             LoadAltParams();
             LoadModParams();
             LoadCvParams();
+            LoadRndParams();
 
             startup_ = false;
 
@@ -775,6 +838,8 @@ public:
 
         HandleLeds();
         HandleLedButtons();
+
+        HandleInDetec();
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
