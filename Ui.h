@@ -826,11 +826,6 @@ public:
         HandleCatchUp();
         HandleLedButtons();
 
-        patchCtrls_->filterVol = 1.f;
-        patchCtrls_->resonatorVol = 0.f;
-        patchCtrls_->echoVol = 0.f;
-        patchCtrls_->ambienceVol = 0.f;
-
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
         if (patchCtrls_->filterVol >= kOne) {
