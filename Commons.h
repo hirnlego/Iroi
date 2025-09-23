@@ -66,11 +66,6 @@ constexpr float kA4Freq = 440.f;
 constexpr int kA4Note = 69;
 constexpr float kSemi4Oct = 12;
 
-static const uint16_t kInDetecSequence[32] = {
-    UINT16_MAX, 0, 0, 0, UINT16_MAX, UINT16_MAX, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX, UINT16_MAX, 0, UINT16_MAX,
-    0, UINT16_MAX, UINT16_MAX, UINT16_MAX, 0, 0, 0, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX, 0, 0, UINT16_MAX, 0
-};
-
 // When internally clocked, base frequency is ~0.18Hz
 // When externally clocked, min bpm is 30 (0.5Hz), max is 300 (5Hz)
 constexpr float kClockFreqMin = 0.01f;
@@ -262,6 +257,8 @@ struct PatchState
     bool cvAttenuverters;
 
     FuncMode funcMode;
+
+    bool inputConnected;
 };
 
 inline bool AreEquals(float val1, float val2, float d = kEps)

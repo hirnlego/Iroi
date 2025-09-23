@@ -42,17 +42,17 @@ private:
 
     CatchUpController* movingParam_;
 
-    Schmitt undoRedoRandomTrigger_, recordAndRandomTrigger_,
+    Schmitt undoRedoRandomTrigger_, randomMapAndRandomTrigger_,
         modTypeLockTrigger_, modSpeedLockTrigger_, saveTrigger_;
     Schmitt filterModeTrigger_, filterPositionTrigger_;
 
-    int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_,
-        samplesSinceModCvPressed_, samplesSinceRecordInReceived_,
-        samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
+    int samplesSinceShiftPressed_, samplesSinceRandomMapOrRandomPressed_,
+        samplesSinceModCvPressed_, samplesSinceRandomMapInReceived_,
+        samplesSinceRandomPressed_;
 
     int hwRevision_;
 
-    bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_,
+    bool wasCvMap_, randomMapAndRandomPressed_, fadeOutOutput_,
         fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
         undoRedo_, doRandomSlew_, startup_;
 
@@ -69,15 +69,12 @@ public:
         movingParam_ = NULL;
 
         samplesSinceShiftPressed_ = 0;
-        samplesSinceRecordOrRandomPressed_ = 0;
+        samplesSinceRandomMapOrRandomPressed_ = 0;
         samplesSinceModCvPressed_ = 0;
-        samplesSinceRecordInReceived_ = 0;
-        samplesSinceRecordingStarted_ = 0;
         samplesSinceRandomPressed_ = 0;
 
         wasCvMap_ = false;
-        recordAndRandomPressed_ = false;
-        recordPressed_ = false; // USE_RECORD_THRESHOLD
+        randomMapAndRandomPressed_ = false;
         fadeOutOutput_ = false;
         fadeInOutput_ = false;
         parameterChangedSinceLastSave_ = false;
@@ -130,6 +127,16 @@ public:
         patchCtrls_->resonatorTuneCvAmount = 1.f;
         patchCtrls_->echoDensityCvAmount = 1.f;
         patchCtrls_->ambienceSpacetimeCvAmount = 1.f;
+
+        // Random map
+        patchCtrls_->filterCutoffRndAmount = 0.f;
+        patchCtrls_->filterResonanceRndAmount = 0.f;
+        patchCtrls_->resonatorTuneRndAmount = 0.f;
+        patchCtrls_->resonatorFeedbackRndAmount = 0.f;
+        patchCtrls_->echoDensityRndAmount = 0.f;
+        patchCtrls_->echoRepeatsRndAmount = 0.f;
+        patchCtrls_->ambienceDecayRndAmount = 0.f;
+        patchCtrls_->ambienceSpacetimeRndAmount = 0.f;
 
         LoadConfig();
 
@@ -472,7 +479,7 @@ public:
         getInitialisingPatchProcessor()->patch->sendMidi(
             MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
 
-        // Send the file index - 0: "iroi.prm", 1: "iroi.alt", 2: "iroi.mod", 3: "iroi.cv"
+        // Send the file index - 0: "iroi.prm", 1: "iroi.alt", 2: "iroi.mod", 3: "iroi.cv", 4: "iroi.rnd"
         getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cp(0, funcMode));
 
         for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++) {
@@ -525,7 +532,6 @@ public:
             break;
 
         case IN_DETEC:
-            debugMessage("Detec");
             break;
 
         default:
@@ -571,6 +577,23 @@ public:
 
         if (patchState_->clockTick) {
             leds_[LED_SYNC]->Blink();
+        }
+    }
+
+    void HandleCatchUp() {
+        bool moving = false;
+        bool wasCatchingUp = false;
+
+        for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
+            CatchUpController* ctrl = (i < PARAM_KNOB_LAST)
+                ? (CatchUpController*)knobs_[i]
+                : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
+            bool m = ctrl->Process();
+            patchState_->moving[i] = m;
+            if (m && !moving) {
+                movingParam_ = ctrl;
+                moving = true;
+            }
         }
     }
     
@@ -694,12 +717,11 @@ public:
 
         default:
             if (randomMapButton_->IsPressed() || randomButton_->IsPressed()) {
-                if (samplesSinceRecordOrRandomPressed_ < kResetLimit) {
-                    samplesSinceRecordOrRandomPressed_++;
+                if (samplesSinceRandomMapOrRandomPressed_ < kResetLimit) {
+                    samplesSinceRandomMapOrRandomPressed_++;
                 }
-                else if (recordAndRandomTrigger_.Process(randomMapButton_->IsPressed() &&
-                             randomButton_->IsPressed())) {
-                    recordAndRandomPressed_ = true;
+                else if (randomMapAndRandomTrigger_.Process(randomMapButton_->IsPressed() && randomButton_->IsPressed())) {
+                    randomMapAndRandomPressed_ = true;
                     // Reset parameters.
                     for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
                         CatchUpController* ctrl = (i < PARAM_KNOB_LAST)
@@ -708,10 +730,10 @@ public:
                         ctrl->Reset();
                     }
                 }
-                // recordAndRandomPressed_ assures that if the last operation
+                // randomMapAndRandomPressed_ assures that if the last operation
                 // was the reset of parameters, the next operation may be
                 // performed only if the buttons are released.
-                else if (!recordAndRandomPressed_) {
+                else if (!randomMapAndRandomPressed_) {
                     if (FuncMode::FUNC_MODE_ALT == patchState_->funcMode) {
                         if (!undoRedo_ && randomButton_->IsOn()) {
                             undoRedo_ = true;
@@ -720,48 +742,12 @@ public:
                 }
             }
             else {
-                samplesSinceRecordOrRandomPressed_ = 0;
-                recordAndRandomPressed_ = false;
-                recordAndRandomTrigger_.Process(0);
+                samplesSinceRandomMapOrRandomPressed_ = 0;
+                randomMapAndRandomPressed_ = false;
+                randomMapAndRandomTrigger_.Process(0);
                 undoRedoRandomTrigger_.Process(0);
             }
             break;
-        }
-    }
-
-    void HandleInDetec() 
-    {
-        /*
-        bool expected_value = normalization_probe_state_ >> 31;
-        for (int i = 0; i < kNumNormalizedChannels; ++i) {
-            CvAdcChannel channel = normalized_channels_[i];
-            bool read_value = cv_adc_.value(channel) < \
-            settings_->calibration_data(channel).normalization_detection_threshold;
-            if (expected_value != read_value) {
-                ++normalization_detection_mismatches_[i];
-            }
-        }
-        
-        ++normalization_detection_count_;
-        if (normalization_detection_count_ == kProbeSequenceDuration) {
-            normalization_detection_count_ = 0;
-            bool* destination = &modulations_->frequency_patched;
-            for (int i = 0; i < kNumNormalizedChannels; ++i) {
-                destination[i] = normalization_detection_mismatches_[i] >= 2;
-                normalization_detection_mismatches_[i] = 0;
-            }
-        }
-        
-        normalization_probe_state_ = 1103515245 * normalization_probe_state_ + 12345;
-        normalization_probe_.Write(normalization_probe_state_ >> 31);
-        
-        */
-    
-        static int i = 0;
-        getInitialisingPatchProcessor()->patch->setButton(IN_DETEC, kInDetecSequence[i], 0);
-        i++;
-        if (i >= 32) {
-            i = 0;
         }
     }
     
@@ -804,7 +790,7 @@ public:
 
     // Called at block rate
     void Poll() {
-        if (!startup_) {
+        if (startup_) {
             LoadMainParams();
             LoadAltParams();
             LoadModParams();
@@ -823,23 +809,27 @@ public:
         for (size_t i = 0; i < PARAM_FADER_LAST; i++) {
             faders_[i]->Read(ParamFader(i));
         }
-
+        
         for (size_t i = 0; i < PARAM_CV_LAST; i++) {
             cvs_[i]->Read(ParamCv(i));
         }
-
+        
         for (size_t i = 0; i < LED_LAST; i++) {
             leds_[i]->Read();
         }
-
+        
         for (size_t i = 0; i < PARAM_MIDI_LAST; i++) {
             midiOuts_[i]->Process();
         }
 
         HandleLeds();
+        HandleCatchUp();
         HandleLedButtons();
 
-        HandleInDetec();
+        patchCtrls_->filterVol = 1.f;
+        patchCtrls_->resonatorVol = 0.f;
+        patchCtrls_->echoVol = 0.f;
+        patchCtrls_->ambienceVol = 0.f;
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
@@ -865,6 +855,7 @@ public:
                     SaveParametersConfig(FuncMode::FUNC_MODE_ALT);
                     SaveParametersConfig(FuncMode::FUNC_MODE_MOD);
                     SaveParametersConfig(FuncMode::FUNC_MODE_CV);
+                    SaveParametersConfig(FuncMode::FUNC_MODE_RND);
                     LedName activeLed = LED_MOD_AMOUNT;
                     if (shiftButton_->IsOn()) {
                         activeLed = LED_CV_AMOUNT;

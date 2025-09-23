@@ -377,8 +377,8 @@ public:
                 ro *= 1.f - ef_[RIGHT_CHANNEL]->process(ro);
             }
 
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, lo * kFilterMakeupGain, patchCtrls_->filterVol);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, ro * kFilterMakeupGain, patchCtrls_->filterVol);
+            leftOut[i] = lo * kFilterMakeupGain * patchCtrls_->filterVol;
+            rightOut[i] = ro * kFilterMakeupGain * patchCtrls_->filterVol;
         }
     }
 };

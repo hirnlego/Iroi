@@ -4,12 +4,14 @@
 #include "Commons.h"
 #include "Ui.h"
 #include "Clock.h"
+#include "InputDetector.h"
 
 class Iroi_1_0_0Patch : public Patch {
 private:
     Ui* ui_;
     Iroi* iroi_;
     Clock* clock_;
+    InputDetector* inDetec_;
 
     PatchCtrls patchCtrls;
     PatchCvs patchCvs;
@@ -24,12 +26,14 @@ public:
         ui_ = Ui::create(&patchCtrls, &patchCvs, &patchState);
         iroi_ = Iroi::create(&patchCtrls, &patchCvs, &patchState);
         clock_ = Clock::create(&patchCtrls, &patchState);
+        inDetec_ = InputDetector::create(&patchCtrls, &patchState);
     }
     ~Iroi_1_0_0Patch()
     {
         Iroi::destroy(iroi_);
         Ui::destroy(ui_);
         Clock::destroy(clock_);
+        InputDetector::destroy(inDetec_);
     }
 
     void buttonChanged(PatchButtonId bid, uint16_t value, uint16_t samples) override
@@ -46,6 +50,7 @@ public:
     {
         clock_->Process();
         ui_->Poll();
+        inDetec_->Process(buffer);
         iroi_->Process(buffer);
     }
 };

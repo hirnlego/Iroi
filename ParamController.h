@@ -23,13 +23,13 @@ enum ParamKnob {
 };
 
 const PatchParameterId paramKnobMap[PARAM_KNOB_LAST] = {
-    PARAMETER_BA,
-    PARAMETER_BB,
     PARAMETER_BC,
-    PARAMETER_BD,
-    PARAMETER_BE,
     PARAMETER_BF,
     PARAMETER_BG,
+    PARAMETER_BB,
+    PARAMETER_BE,
+    PARAMETER_BD,
+    PARAMETER_BA,
     PARAMETER_BH,
     PARAMETER_H,
     PARAMETER_AA,
