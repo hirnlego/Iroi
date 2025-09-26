@@ -151,36 +151,43 @@ public:
 
         knobs_[PARAM_KNOB_FILTER_CUTOFF] = KnobController::create(patchState_,
             &patchCtrls_->filterCutoff, &patchCtrls_->filterMode,
-            &patchCtrls_->filterCutoffModAmount, &patchCtrls_->filterCutoffCvAmount);
+            &patchCtrls_->filterCutoffModAmount, &patchCtrls_->filterCutoffCvAmount, &patchCtrls_->filterCutoffRndAmount);
         knobs_[PARAM_KNOB_FILTER_RESONANCE] = KnobController::create(patchState_,
             &patchCtrls_->filterResonance, &patchCtrls_->filterPosition,
             &patchCtrls_->filterResonanceModAmount,
-            &patchCtrls_->filterResonanceCvAmount);
+            &patchCtrls_->filterResonanceCvAmount,
+            &patchCtrls_->filterResonanceRndAmount);
 
         knobs_[PARAM_KNOB_RESONATOR_TUNE] = KnobController::create(patchState_,
             &patchCtrls_->resonatorTune, &patchCtrls_->resonatorDissonance,
             &patchCtrls_->resonatorTuneModAmount,
-            &patchCtrls_->resonatorTuneCvAmount, 0.005f);
+            &patchCtrls_->resonatorTuneCvAmount,
+            &patchCtrls_->resonatorTuneRndAmount, 0.005f);
         knobs_[PARAM_KNOB_RESONATOR_FEEDBACK] =
             KnobController::create(patchState_, &patchCtrls_->resonatorFeedback,
                 NULL, &patchCtrls_->resonatorFeedbackModAmount,
-                &patchCtrls_->resonatorFeedbackCvAmount);
+                &patchCtrls_->resonatorFeedbackCvAmount,
+                &patchCtrls_->resonatorFeedbackRndAmount);
 
         knobs_[PARAM_KNOB_ECHO_DENSITY] =
             KnobController::create(patchState_, &patchCtrls_->echoDensity,
                 &patchCtrls_->echoFilter, &patchCtrls_->echoDensityModAmount,
-                &patchCtrls_->echoDensityCvAmount, 0.005f);
+                &patchCtrls_->echoDensityCvAmount,
+                &patchCtrls_->echoDensityRndAmount, 0.005f);
         knobs_[PARAM_KNOB_ECHO_REPEATS] = KnobController::create(patchState_,
             &patchCtrls_->echoRepeats, NULL, &patchCtrls_->echoRepeatsModAmount,
-            &patchCtrls_->echoRepeatsCvAmount);
+            &patchCtrls_->echoRepeatsCvAmount,
+            &patchCtrls_->echoRepeatsRndAmount);
 
         knobs_[PARAM_KNOB_AMBIENCE_SPACETIME] = KnobController::create(patchState_,
             &patchCtrls_->ambienceSpacetime, &patchCtrls_->ambienceAutoPan,
             &patchCtrls_->ambienceSpacetimeModAmount,
-            &patchCtrls_->ambienceSpacetimeCvAmount, 0.005f);
+            &patchCtrls_->ambienceSpacetimeCvAmount,
+            &patchCtrls_->ambienceSpacetimeRndAmount, 0.005f);
         knobs_[PARAM_KNOB_AMBIENCE_DECAY] = KnobController::create(patchState_,
             &patchCtrls_->ambienceDecay, NULL, &patchCtrls_->ambienceDecayModAmount,
-            &patchCtrls_->ambienceDecayCvAmount);
+            &patchCtrls_->ambienceDecayCvAmount,
+            &patchCtrls_->ambienceDecayRndAmount);
 
         knobs_[PARAM_KNOB_MOD_LEVEL] =
             KnobController::create(patchState_, &patchCtrls_->modLevel);
@@ -752,40 +759,35 @@ public:
     }
     
     void UndoRedo() {
-        /*
-        if (RandomMode::RANDOM_EFFECTS == randomMode_ || RandomMode::RANDOM_ALL == randomMode_) 
-        {
-            knobs_[PARAM_KNOB_FILTER_CUTOFF]->UndoRedo();
-            knobs_[PARAM_KNOB_FILTER_RESONANCE]->UndoRedo();
-            
-            knobs_[PARAM_KNOB_RESONATOR_TUNE]->UndoRedo();
-            knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->UndoRedo();
-            
-            knobs_[PARAM_KNOB_ECHO_REPEATS]->UndoRedo();
-            knobs_[PARAM_KNOB_ECHO_DENSITY]->UndoRedo();
-            
-            knobs_[PARAM_KNOB_AMBIENCE_DECAY]->UndoRedo();
-            knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->UndoRedo();
-        }
-        */
+        knobs_[PARAM_KNOB_FILTER_CUTOFF]->UndoRedo();
+        knobs_[PARAM_KNOB_FILTER_RESONANCE]->UndoRedo();
+        
+        knobs_[PARAM_KNOB_RESONATOR_TUNE]->UndoRedo();
+        knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->UndoRedo();
+        
+        knobs_[PARAM_KNOB_ECHO_REPEATS]->UndoRedo();
+        knobs_[PARAM_KNOB_ECHO_DENSITY]->UndoRedo();
+        
+        knobs_[PARAM_KNOB_AMBIENCE_DECAY]->UndoRedo();
+        knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->UndoRedo();
 
         undoRedo_ = false;
     }
 
     void Randomize() {
-        float randomAmount = 0;
+        knobs_[PARAM_KNOB_FILTER_CUTOFF]->Randomize();
+        knobs_[PARAM_KNOB_FILTER_RESONANCE]->Randomize();
 
-        knobs_[PARAM_KNOB_FILTER_CUTOFF]->Randomize(randomAmount);
-        knobs_[PARAM_KNOB_FILTER_RESONANCE]->Randomize(randomAmount);
+        knobs_[PARAM_KNOB_RESONATOR_TUNE]->Randomize();
+        knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->Randomize();
 
-        knobs_[PARAM_KNOB_RESONATOR_TUNE]->Randomize(randomAmount);
-        knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->Randomize(randomAmount);
+        knobs_[PARAM_KNOB_ECHO_REPEATS]->Randomize();
+        knobs_[PARAM_KNOB_ECHO_DENSITY]->Randomize();
 
-        knobs_[PARAM_KNOB_ECHO_REPEATS]->Randomize(randomAmount);
-        knobs_[PARAM_KNOB_ECHO_DENSITY]->Randomize(randomAmount);
+        knobs_[PARAM_KNOB_AMBIENCE_DECAY]->Randomize();
+        knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->Randomize();
 
-        knobs_[PARAM_KNOB_AMBIENCE_DECAY]->Randomize(randomAmount);
-        knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->Randomize(randomAmount);
+        randomize_ = false;
     }
 
     // Called at block rate

@@ -73,14 +73,6 @@ const PatchParameterId paramCvMap[PARAM_CV_LAST] = {
     PARAMETER_E,
 };
 
-enum ParamButton {
-    PARAM_BUTTON_RECORD,
-    PARAM_BUTTON_RANDOM,
-    PARAM_BUTTON_SHIFT,
-    PARAM_BUTTON_MOD_CV,
-    PARAM_BUTTON_LAST,
-};
-
 enum ParamState {
     PARAM_STATE_TRACKING,
     PARAM_STATE_LOCKED,
@@ -127,7 +119,7 @@ private:
     float nextValue_;
     float slewInc_;
 
-    uint32_t randomSeed_;
+    uint32_t randomSeed1_, randomSeed2_;
 
     bool bipolar_;
     bool active_;
@@ -153,7 +145,8 @@ public:
         }
         bipolar_ = bipolar;
         active_ = active;
-        randomSeed_ = rand();
+        randomSeed1_ = rand();
+        randomSeed2_ = rand();
         slewInc_ = 0;
 
         selectedParam_ = LockableParamName::PARAM_LOCKABLE_MAIN;
@@ -214,6 +207,11 @@ public:
         bipolar_ = bipolar;
     }
 
+    inline float GetValue()
+    {
+        return *value_;
+    }
+
     inline void SetValue(float value, bool slew = false)
     {
         previousValue_ = *value_;
@@ -237,39 +235,28 @@ public:
 
     inline void Randomize(float amount)
     {
-        randomSeed_ ^= randomSeed_ << 13;
-        randomSeed_ ^= randomSeed_ >> 17;
-        randomSeed_ ^= randomSeed_ << 5;
-        float rf = randomSeed_ * (1 / 4294967296.0f); // Random number between 0 and 1
-        float s1 = *value_ < 0.5f ? 1 : -1;
-        float s2 = rf < 0.5f ? 1 : -1;
+        randomSeed1_ ^= randomSeed1_ << 13;
+        randomSeed1_ ^= randomSeed1_ >> 17;
+        randomSeed1_ ^= randomSeed1_ << 5;
+        float r1 = randomSeed1_ * (1 / 4294967296.0f); // Random number between 0 and 1
 
-        float v;
+        randomSeed2_ ^= randomSeed2_ << 13;
+        randomSeed2_ ^= randomSeed2_ >> 17;
+        randomSeed2_ ^= randomSeed2_ << 5;
+        float r2 = randomSeed2_ * (1 / 4294967296.0f); // Random number between 0 and 1
 
-        if (amount == RandomAmount::RANDOM_HIGH)
+        float s = r2 < 0.5f ? 1 : -1;
+        if (s == -1 && *value_ == 0)
         {
-            if (rf < 0.1f)
-            {
-                v = (*value_ < 0.5f ? 0.9f : 0.1f);
-            }
-            else
-            {
-                //v = Wrap(*value_ + rf * s1);
-                v = rf;
-            }
+            s = 1;
         }
-        else if (amount == RandomAmount::RANDOM_MID)
+        else if (s == 1 && *value_ == 1)
         {
-            v = *value_ + rf * 0.1f * s1;
-        }
-        else
-        {
-            v = *value_ + rf * 0.02f * s1;
+            s = -1;
         }
 
-        v = Clamp(v, 0, 1);
-
-        SetValue(v, true);
+        float v = *value_ + r1 * amount * s;
+        SetValue(Wrap(v), true);
     }
 
     inline void Realign()
@@ -419,13 +406,14 @@ private:
 
 public:
     KnobController() {}
-    KnobController(PatchState* patchState, float* mainParam, float* altParam, float* modParam, float* cvParam, float lpCoeff, float movementDelta)
+    KnobController(PatchState* patchState, float* mainParam, float* altParam, float* modParam, float* cvParam, float* rndParam, float lpCoeff, float movementDelta)
     {
         patchState_ = patchState;
         lockableParams_[LockableParamName::PARAM_LOCKABLE_MAIN].Init(patchState, mainParam, LockableParamName::PARAM_LOCKABLE_MAIN, ParamState::PARAM_STATE_TRACKING);
         lockableParams_[LockableParamName::PARAM_LOCKABLE_ALT].Init(patchState, altParam, LockableParamName::PARAM_LOCKABLE_ALT, ParamState::PARAM_STATE_LOCKED, false, altParam != NULL);
         lockableParams_[LockableParamName::PARAM_LOCKABLE_MOD].Init(patchState, modParam, LockableParamName::PARAM_LOCKABLE_MOD, ParamState::PARAM_STATE_LOCKED, patchState->modAttenuverters, modParam != NULL);
         lockableParams_[LockableParamName::PARAM_LOCKABLE_CV].Init(patchState, cvParam, LockableParamName::PARAM_LOCKABLE_CV, ParamState::PARAM_STATE_LOCKED, patchState->cvAttenuverters, cvParam != NULL);
+        lockableParams_[LockableParamName::PARAM_LOCKABLE_RND].Init(patchState, rndParam, LockableParamName::PARAM_LOCKABLE_RND, ParamState::PARAM_STATE_LOCKED, false, rndParam != NULL);
 
         selectedParam_ = LockableParamName::PARAM_LOCKABLE_MAIN;
         catchUp_ = ParamCatchUp::PARAM_CATCH_UP_NONE;
@@ -449,10 +437,11 @@ public:
         float* altParam = NULL,
         float* modParam = NULL,
         float* cvParam = NULL,
+        float* rndParam = NULL,
         float lpCoeff = 0.01f,
         float movementDelta = 0.01f
     ) {
-        return new KnobController(patchState, mainParam, altParam, modParam, cvParam, lpCoeff, movementDelta);
+        return new KnobController(patchState, mainParam, altParam, modParam, cvParam, rndParam, lpCoeff, movementDelta);
     }
 
     static void destroy(KnobController* obj)
@@ -487,13 +476,13 @@ public:
         lockableParams_[name].UndoRedo();
     }
 
-    inline void Randomize(float amount, LockableParamName name = LockableParamName::PARAM_LOCKABLE_MAIN)
+    inline void Randomize(LockableParamName name = LockableParamName::PARAM_LOCKABLE_MAIN)
     {
         for (size_t i = 0; i < LockableParamName::PARAM_LOCKABLE_LAST; i++)
         {
             lockableParams_[i].Lock();
         }
-        lockableParams_[name].Randomize(amount);
+        lockableParams_[name].Randomize(lockableParams_[PARAM_LOCKABLE_RND].GetValue());
         lockableParams_[selectedParam_].Unlock(true);
     }
 
@@ -506,6 +495,9 @@ public:
             break;
         case LockableParamName::PARAM_LOCKABLE_CV:
             lockableParams_[selectedParam_].Reset();
+            break;
+        case LockableParamName::PARAM_LOCKABLE_RND:
+            lockableParams_[selectedParam_].Clear();
             break;
 
         default:
@@ -530,6 +522,10 @@ public:
 
         case FUNC_MODE_CV:
             selectedParam = PARAM_LOCKABLE_CV;
+            break;
+
+        case FUNC_MODE_RND:
+            selectedParam = PARAM_LOCKABLE_RND;
             break;
 
         default:

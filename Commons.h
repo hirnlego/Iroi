@@ -375,8 +375,7 @@ inline float M2D(float note, float sampleRate = 48000.f)
 }
 
 /**
- * @brief Keeps the value between 0 and size by wrapping it back from the
- *        opposite boundary if necessary.
+ * @brief Keeps the value between 0 and size by wrapping it back if necessary.
  *
  * @param val
  * @param size
@@ -386,11 +385,11 @@ inline float Wrap(float val, float size = 1.f)
 {
     while (val < 0)
     {
-        val += size;
+        val = -val;
     }
     while (val > size)
     {
-        val -= size;
+        val = size - (val - size);
     }
 
     return val;
