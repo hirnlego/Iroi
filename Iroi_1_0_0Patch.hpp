@@ -50,7 +50,7 @@ public:
     {
         clock_->Process();
         ui_->Poll();
-        inDetec_->Process(buffer);
+        //inDetec_->Process(buffer);
         iroi_->Process(buffer);
     }
 };
