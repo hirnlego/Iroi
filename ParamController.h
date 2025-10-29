@@ -23,7 +23,7 @@ enum ParamKnob {
 };
 
 const PatchParameterId paramKnobMap[PARAM_KNOB_LAST] = {
-    PARAMETER_BC,
+    PARAMETER_E,
     PARAMETER_BF,
     PARAMETER_BG,
     PARAMETER_BB,
@@ -31,8 +31,8 @@ const PatchParameterId paramKnobMap[PARAM_KNOB_LAST] = {
     PARAMETER_BD,
     PARAMETER_BA,
     PARAMETER_BH,
-    PARAMETER_H,
     PARAMETER_AA,
+    PARAMETER_AB,
 };
 
 enum ParamFader {
@@ -63,14 +63,23 @@ enum ParamCv {
 };
 
 const PatchParameterId paramCvMap[PARAM_CV_LAST] = {
-    PARAMETER_G,
-    PARAMETER_G,
-    PARAMETER_AB,
-    PARAMETER_AB,
+    PARAMETER_H,
+    PARAMETER_H,
+    PARAMETER_AC,
+    PARAMETER_AC,
     PARAMETER_F,
     PARAMETER_F,
-    PARAMETER_E,
-    PARAMETER_E,
+    PARAMETER_G,
+    PARAMETER_G,
+};
+
+enum ParamSwitch {
+    PARAM_SWITCH_MAP_SELECTOR,
+    PARAM_SWITCH_LAST,
+};
+
+const PatchParameterId paramSwitchMap[PARAM_SWITCH_LAST] = {
+    PARAMETER_AE, // Map target
 };
 
 enum ParamState {
@@ -657,9 +666,11 @@ class FaderController : public CatchUpController
 private:
     LockableParam lockableParam_;
 
+    float scale_;
+
 public:
     FaderController() {}
-    FaderController(PatchState* patchState, float* param, float lpCoeff, float movementDelta)
+    FaderController(PatchState* patchState, float* param, float lpCoeff, float movementDelta, float scale)
     {
         lockableParam_.Init(patchState, param, LockableParamName::PARAM_LOCKABLE_MAIN, ParamState::PARAM_STATE_TRACKING);
 
@@ -670,7 +681,8 @@ public:
         readValue_ = 0.f;
         ctrlValue_ = 0.f;
         storedValue_ = 0.f;
-
+        scale_ = scale;
+        
         first_ = true;
         moving_ = false;
         samplesSinceStartMoving_ = 0;
@@ -682,9 +694,10 @@ public:
         PatchState* patchState,
         float* param,
         float lpCoeff = 0.02f,
-        float movementDelta = 0.01f
+        float movementDelta = 0.01f,
+        float scale = 3.f
     ) {
-        return new FaderController(patchState, param, lpCoeff, movementDelta);
+        return new FaderController(patchState, param, lpCoeff, movementDelta, scale);
     }
 
     static void destroy(FaderController* obj)
@@ -704,7 +717,7 @@ public:
 
     inline void Read(ParamFader fader)
     {
-        readValue_ = getInitialisingPatchProcessor()->patch->getParameterValue(paramFaderMap[fader]);
+        readValue_ = getInitialisingPatchProcessor()->patch->getParameterValue(paramFaderMap[fader]) * scale_;
 
         if (lpCoeff_ > 0 && !first_)
         {
@@ -778,6 +791,97 @@ public:
         }
 
         return catchUp_;
+    }
+};
+
+class SwitchController
+{
+private:
+    float* mainParam_;
+    float switchValue_;
+    float undoValue_;
+    float redoValue_;
+
+    bool canUndo_;
+    bool canRedo_;
+
+public:
+    SwitchController(float* mainParam)
+    {
+        mainParam_ = mainParam;
+        switchValue_ = 0.f;
+        undoValue_ = 0.f;
+        redoValue_ = 0.f;
+        canUndo_ = false;
+        canRedo_ = false;
+    }
+    ~SwitchController() {}
+
+    static SwitchController* create(float* mainParam)
+    {
+        return new SwitchController(mainParam);
+    }
+
+    static void destroy(SwitchController* obj)
+    {
+        delete obj;
+    }
+
+    inline void Set(float value)
+    {
+        switchValue_ = value;
+        *mainParam_ = switchValue_;
+    }
+
+    inline void UndoRedo()
+    {
+        if (canUndo_)
+        {
+            *mainParam_ = undoValue_;
+
+            canUndo_ = false;
+            canRedo_ = true;
+        }
+        else if (canRedo_)
+        {
+            *mainParam_ = redoValue_;
+
+            canUndo_ = true;
+            canRedo_ = false;
+        }
+    }
+
+    inline void Randomize(bool undoRedo = false)
+    {
+        if (undoRedo)
+        {
+            UndoRedo();
+        }
+        else
+        {
+            undoValue_ = *mainParam_;
+            redoValue_ = RandomFloat();
+            *mainParam_ = redoValue_;
+            canUndo_ = true;
+        }
+    }
+
+    inline void Reset()
+    {
+        *mainParam_ = switchValue_;
+    }
+
+    inline void Read(ParamSwitch swtch)
+    {
+        float v = getInitialisingPatchProcessor()->patch->getParameterValue(paramSwitchMap[swtch]);
+        if (v != switchValue_)
+        {
+            switchValue_ = v;
+            if (switchValue_ != *mainParam_)
+            {
+                *mainParam_ = switchValue_;
+            }
+        }
     }
 };
 
@@ -1310,162 +1414,6 @@ public:
     {
         on_ = on;
         led_->Set(on_);
-    }
-
-    inline void Trig(bool pressed)
-    {
-        pressed_ = pressed;
-
-        // Act only when the led button is pressed.
-        if (pressed_)
-        {
-            Set(!on_);
-            samplesSincePressed_ = 0;
-            samplesSinceHeld_ = 0;
-        }
-    }
-
-    // Called at block rate
-    inline void Process()
-    {
-        if (!on_)
-        {
-            return;
-        }
-
-        if (pressed_)
-        {
-            if (hold_)
-            {
-                if (samplesSinceHeld_ < kGateLimit)
-                {
-                    // Holding.
-                    samplesSinceHeld_++;
-                }
-                else
-                {
-                    gate_ = false;
-                }
-            }
-            else
-            {
-                if (samplesSincePressed_ < kGateLimit)
-                {
-                    // Holding.
-                    samplesSincePressed_++;
-                }
-                else
-                {
-                    hold_ = true;
-                    gate_ = true;
-                    samplesSinceHeld_ = 0;
-                }
-            }
-        }
-        else if (hold_)
-        {
-            // Released.
-            Set(!on_);
-            hold_ = false;
-            gate_ = false;
-        }
-    }
-};
-
-class ModCvButtonController
-{
-private:
-    Led* modLed_;
-    Led* cvLed_;
-    FuncMode funcMode_;
-
-    bool on_;
-
-    bool latched_;
-    bool hold_;
-    bool pressed_;
-    bool trig_;
-    bool gate_;
-
-    int samplesSincePressed_;
-    int samplesSinceHeld_;
-public:
-    ModCvButtonController(Led* modLed, Led* cvLed)
-    {
-        modLed_ = modLed;
-        cvLed_ = cvLed;
-
-        funcMode_ = FuncMode::FUNC_MODE_NONE;
-
-        on_ = false;
-        hold_ = false;
-        pressed_ = false;
-        trig_ = false;
-
-        samplesSincePressed_ = 0;
-        samplesSinceHeld_ = 0;
-    }
-    ~ModCvButtonController() {}
-
-    static ModCvButtonController* create(Led* modLed, Led* cvLed)
-    {
-        return new ModCvButtonController(modLed, cvLed);
-    }
-
-    static void destroy(ModCvButtonController* obj)
-    {
-        delete obj;
-    }
-
-    inline bool IsOn()
-    {
-        return on_;
-    }
-
-    // True when the button is pressed, false when released.
-    inline bool IsPressed()
-    {
-        return pressed_;
-    }
-
-    // True when the button is being kept pressed for some time, false when released.
-    inline bool IsHeld()
-    {
-        return hold_;
-    }
-
-    // True when the button is being kept pressed for some time, false after a little more.
-    inline bool IsGate()
-    {
-        return gate_;
-    }
-
-    inline void Set(bool on)
-    {
-        on_ = on;
-
-        if (FuncMode::FUNC_MODE_CV == funcMode_)
-        {
-            modLed_->Set(0);
-            cvLed_->Set(on_);
-        }
-        else
-        {
-            modLed_->Set(on_);
-            cvLed_->Set(0);
-        }
-    }
-
-    inline void SetFuncMode(FuncMode funcMode)
-    {
-        // Set func mode only if the led button isn't pressed.
-        if (!pressed_)
-        {
-            funcMode_ = funcMode;
-            hold_ = false;
-            trig_ = false;
-            Set(on_);
-        }
     }
 
     inline void Trig(bool pressed)

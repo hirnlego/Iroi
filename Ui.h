@@ -33,10 +33,10 @@ private:
     KnobController* knobs_[PARAM_KNOB_LAST];
     FaderController* faders_[PARAM_FADER_LAST];
     CvController* cvs_[PARAM_CV_LAST];
-    RandomMapButtonController* randomMapButton_;
+    SwitchController* switches_[PARAM_SWITCH_LAST];
+    RandomMapButtonController* mapButton_;
     RandomButtonController* randomButton_;
     ShiftButtonController* shiftButton_;
-    ModCvButtonController* modCvButton_;
     Led* leds_[LED_LAST];
     MidiController* midiOuts_[PARAM_MIDI_LAST];
 
@@ -47,18 +47,20 @@ private:
     Schmitt filterModeTrigger_, filterPositionTrigger_;
 
     int samplesSinceShiftPressed_, samplesSinceRandomMapOrRandomPressed_,
-        samplesSinceModCvPressed_, samplesSinceRandomMapInReceived_,
+        samplesSinceMapButtonPressed_, samplesSinceRandomMapInReceived_,
         samplesSinceRandomPressed_;
 
     int hwRevision_;
 
-    bool wasCvMap_, randomMapAndRandomPressed_, fadeOutOutput_,
+    bool randomMapAndRandomPressed_, fadeOutOutput_,
         fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
-        undoRedo_, doRandomSlew_, startup_;
+        undoRedo_, doRandomSlew_, startup_, mapActive_;
 
     int randomizeTask_;
 
     float randomize_, randomSlewInc_;
+
+    FuncMode selectedMapTarget_;
 
 public:
     Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) {
@@ -70,10 +72,9 @@ public:
 
         samplesSinceShiftPressed_ = 0;
         samplesSinceRandomMapOrRandomPressed_ = 0;
-        samplesSinceModCvPressed_ = 0;
+        samplesSinceMapButtonPressed_ = 0;
         samplesSinceRandomPressed_ = 0;
 
-        wasCvMap_ = false;
         randomMapAndRandomPressed_ = false;
         fadeOutOutput_ = false;
         fadeInOutput_ = false;
@@ -84,6 +85,9 @@ public:
         undoRedo_ = false;
         doRandomSlew_ = false;
         startup_ = true;
+        mapActive_ = false;
+
+        selectedMapTarget_ = FuncMode::FUNC_MODE_NONE;
 
         randomizeTask_ = 0;
 
@@ -129,14 +133,14 @@ public:
         patchCtrls_->ambienceSpacetimeCvAmount = 1.f;
 
         // Random map
-        patchCtrls_->filterCutoffRndAmount = 0.f;
-        patchCtrls_->filterResonanceRndAmount = 0.f;
-        patchCtrls_->resonatorTuneRndAmount = 0.f;
-        patchCtrls_->resonatorFeedbackRndAmount = 0.f;
-        patchCtrls_->echoDensityRndAmount = 0.f;
-        patchCtrls_->echoRepeatsRndAmount = 0.f;
-        patchCtrls_->ambienceDecayRndAmount = 0.f;
-        patchCtrls_->ambienceSpacetimeRndAmount = 0.f;
+        patchCtrls_->filterCutoffRndAmount = 0.5f;
+        patchCtrls_->filterResonanceRndAmount = 0.5f;
+        patchCtrls_->resonatorTuneRndAmount = 0.5f;
+        patchCtrls_->resonatorFeedbackRndAmount = 0.5f;
+        patchCtrls_->echoDensityRndAmount = 0.5f;
+        patchCtrls_->echoRepeatsRndAmount = 0.5f;
+        patchCtrls_->ambienceDecayRndAmount = 0.5f;
+        patchCtrls_->ambienceSpacetimeRndAmount = 0.5f;
 
         LoadConfig();
 
@@ -194,6 +198,9 @@ public:
         knobs_[PARAM_KNOB_MOD_SPEED] = KnobController::create(
             patchState_, &patchCtrls_->modSpeed, &patchCtrls_->modType);
 
+        switches_[PARAM_SWITCH_MAP_SELECTOR] =
+            SwitchController::create(&patchCtrls_->mapTarget);
+
         cvs_[PARAM_CV_FILTER_CUTOFF] = CvController::create(
             &patchCvs_->filterCutoff, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
         cvs_[PARAM_CV_FILTER_RESONANCE] =
@@ -215,10 +222,8 @@ public:
         leds_[LED_SYNC] = Led::create(SYNC_IN);
         leds_[LED_MOD] = Led::create(MOD_LED_PARAM, LedType::LED_TYPE_PARAM);
         leds_[LED_RANDOM] = Led::create(RANDOM_BUTTON);
-        leds_[LED_RANDOM_MAP] = Led::create(RANDOM_MAP_BUTTON);
+        leds_[LED_MAP] = Led::create(MAP_BUTTON);
         leds_[LED_SHIFT] = Led::create(SHIFT_BUTTON);
-        leds_[LED_MOD_AMOUNT] = Led::create(MOD_CV_RED_LED_PARAM);
-        leds_[LED_CV_AMOUNT] = Led::create(MOD_CV_GREEN_LED_PARAM);
 
         midiOuts_[PARAM_MIDI_FILTER_CUTOFF] = MidiController::create(
             &patchCtrls_->filterCutoff, ParamMidi::PARAM_MIDI_FILTER_CUTOFF);
@@ -261,6 +266,8 @@ public:
             &patchCtrls_->modSpeed, ParamMidi::PARAM_MIDI_MOD_SPEED);
         midiOuts_[PARAM_MIDI_MOD_TYPE] = MidiController::create(
             &patchCtrls_->modType, ParamMidi::PARAM_MIDI_MOD_TYPE);
+        midiOuts_[PARAM_MIDI_MAP_SELECTOR] = MidiController::create(
+            &patchCtrls_->mapTarget, ParamMidi::PARAM_MIDI_MAP_SELECTOR);
         midiOuts_[PARAM_MIDI_RANDOMIZE] =
             MidiController::create(&randomize_, ParamMidi::PARAM_MIDI_RANDOMIZE);
 
@@ -277,10 +284,9 @@ public:
             MidiController::create(&patchCvs_->ambienceSpacetime,
                 ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME_CV, 0, 0.5f, 0.6666667f);
 
-        randomMapButton_ = RandomMapButtonController::create(leds_[LED_RANDOM_MAP]);
+        mapButton_ = RandomMapButtonController::create(leds_[LED_MAP]);
         randomButton_ = RandomButtonController::create(leds_[LED_RANDOM]);
         shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
-        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
     }
     ~Ui() {
         FloatArray::destroy(patchState_->inputLevel);
@@ -295,16 +301,18 @@ public:
         for (size_t i = 0; i < PARAM_CV_LAST; i++) {
             CvController::destroy(cvs_[i]);
         }
+        for (size_t i = 0; i < PARAM_SWITCH_LAST; i++) {
+            SwitchController::destroy(switches_[i]);
+        }
         for (size_t i = 0; i < LED_LAST; i++) {
             Led::destroy(leds_[i]);
         }
         for (size_t i = 0; i < PARAM_MIDI_LAST; i++) {
             MidiController::destroy(midiOuts_[i]);
         }
-        RandomMapButtonController::destroy(randomMapButton_);
+        RandomMapButtonController::destroy(mapButton_);
         RandomButtonController::destroy(randomButton_);
         ShiftButtonController::destroy(shiftButton_);
-        ModCvButtonController::destroy(modCvButton_);
     }
 
     static Ui* create(
@@ -526,16 +534,14 @@ public:
             randomButton_->Trig(on);
             break;
 
-        case RANDOM_MAP_BUTTON:
-            randomMapButton_->Trig(on);
+        case MAP_BUTTON:
+            mapButton_->Trig(on);
             break;
 
         case SHIFT_BUTTON:
-            shiftButton_->Trig(on);
-            break;
-
-        case MOD_CV_BUTTON:
-            modCvButton_->Trig(on);
+            if (!mapActive_) {
+                shiftButton_->Trig(on);
+            }
             break;
 
         case IN_DETEC:
@@ -605,107 +611,69 @@ public:
     }
     
     void HandleLedButtons() {
-        randomMapButton_->Process();
+        mapButton_->Process();
         randomButton_->Process();
         shiftButton_->Process();
-        modCvButton_->Process();
+
+        mapActive_ = mapButton_->IsOn() && !shiftButton_->IsOn();
 
         FuncMode funcMode = patchState_->funcMode;
-        if (modCvButton_->IsPressed()) {
+        if (mapButton_->IsPressed()) {
             // Handle long press for saving.
-            if (samplesSinceModCvPressed_ < kSaveLimit) {
-                samplesSinceModCvPressed_++;
-                leds_[shiftButton_->IsOn() ? LED_CV_AMOUNT : LED_MOD_AMOUNT]->On();
+            if (samplesSinceMapButtonPressed_ < kSaveLimit) {
+                samplesSinceMapButtonPressed_++;
+                leds_[LED_MAP]->On();
             }
             else if (!saveFlag_) {
                 // Save.
                 saveFlag_ = true;
                 saving_ = true;
                 fadeOutOutput_ = true;
-                leds_[shiftButton_->IsOn() ? LED_CV_AMOUNT : LED_MOD_AMOUNT]->Off();
+                leds_[LED_MAP]->Off();
             }
         }
-        else if (shiftButton_->IsOn() && !modCvButton_->IsOn() && !randomMapButton_->IsOn()) {
+        else if (shiftButton_->IsOn() && mapButton_->IsOn() && !randomButton_->IsOn()) {
+            // Only SHIFT button and MAP_BUTTON are on.
+            // TODO: Clear the mappings selected by the switch.
+        }
+        else if (shiftButton_->IsOn() && !mapButton_->IsOn() && !randomButton_->IsOn()) {
             // Only SHIFT button is on.
             if (saveFlag_) {
                 // Saving button has been released.
-                samplesSinceModCvPressed_ = 0;
+                samplesSinceMapButtonPressed_ = 0;
                 saveFlag_ = false;
-
-                // Restore previous button state.
-                if (FuncMode::FUNC_MODE_CV == patchState_->funcMode) {
-                    modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_CV);
-                    modCvButton_->Set(true);
-                }
-            }
-            else if (wasCvMap_) {
-                // If we were editing CV mapping and MOD/CV button turns off,
-                // exit from CV mapping.
-                modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_NONE);
-                shiftButton_->Set(false);
-                wasCvMap_ = false;
-                samplesSinceModCvPressed_ = 0;
             }
             else {
                 funcMode = FuncMode::FUNC_MODE_ALT;
-                wasCvMap_ = false;
             }
         }
-        else if (modCvButton_->IsOn() && !shiftButton_->IsOn() && !randomMapButton_->IsOn()) {
-            // Only MOD/CV button is on.
-            if (wasCvMap_) {
-                // If we were editing CV mapping and SHIFT button turns off,
-                // exit from CV mapping.
-                modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_NONE);
-                modCvButton_->Set(false);
-                wasCvMap_ = false;
-                samplesSinceModCvPressed_ = 0;
-            }
-            else {
-                funcMode = FuncMode::FUNC_MODE_MOD;
-            }
-        }
-        else if (shiftButton_->IsOn() && modCvButton_->IsOn() && !randomMapButton_->IsOn()) {
-            // Both SHIFT and MOD/CV buttons are on.
-            funcMode = FuncMode::FUNC_MODE_CV;
-            wasCvMap_ = true;
-        }
-        else if (randomMapButton_->IsOn() && !shiftButton_->IsOn() && !modCvButton_->IsOn()) {
-            // Only RANDOM_MAP_BUTTON button is on.
-            funcMode = FuncMode::FUNC_MODE_RND;
-            wasCvMap_ = true;
-        }
-        else if (!shiftButton_->IsOn() && !modCvButton_->IsOn() && !randomMapButton_->IsOn()) {
-            // Neither SHIFT, MOD/CV nor RANDOM_MAP_BUTTON buttons are on.
+        else if (!shiftButton_->IsOn() && !mapButton_->IsOn()) {
+            // Neither SHIFT nor MAP_BUTTON buttons are on.
             if (saveFlag_) {
                 // Saving button has been released.
                 saveFlag_ = false;
-
-                // Restore previous button state.
-                if (FuncMode::FUNC_MODE_MOD == patchState_->funcMode) {
-                    modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_MOD);
-                    modCvButton_->Set(true);
-                }
             }
             else {
                 funcMode = FuncMode::FUNC_MODE_NONE;
             }
-            samplesSinceModCvPressed_ = 0;
+            samplesSinceMapButtonPressed_ = 0;
+        }
+
+        if (mapActive_) {
+            funcMode = selectedMapTarget_;
         }
 
         if (funcMode != patchState_->funcMode) {
             patchState_->funcMode = funcMode;
-
             for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
                 knobs_[i]->SetFuncMode(patchState_->funcMode);
             }
-            randomMapButton_->SetFuncMode(patchState_->funcMode);
+            mapButton_->SetFuncMode(patchState_->funcMode);
             randomButton_->SetFuncMode(patchState_->funcMode);
-            modCvButton_->SetFuncMode(patchState_->funcMode);
         }
 
-        switch (patchState_->funcMode) {
-        case FuncMode::FUNC_MODE_NONE:
+        if (patchState_->funcMode != FUNC_MODE_ALT) 
+        {
             // Handle long press of the random button for slewing.
             if (randomButton_->IsPressed()) {
                 leds_[LED_RANDOM]->On();
@@ -720,14 +688,15 @@ public:
                 samplesSinceRandomPressed_ = 0;
                 randomize_ = true;
             }
-            break;
+        }
 
-        default:
-            if (randomMapButton_->IsPressed() || randomButton_->IsPressed()) {
+        if (patchState_->funcMode != FUNC_MODE_NONE)
+        {
+            if (mapButton_->IsPressed() || randomButton_->IsPressed()) {
                 if (samplesSinceRandomMapOrRandomPressed_ < kResetLimit) {
                     samplesSinceRandomMapOrRandomPressed_++;
                 }
-                else if (randomMapAndRandomTrigger_.Process(randomMapButton_->IsPressed() && randomButton_->IsPressed())) {
+                else if (randomMapAndRandomTrigger_.Process(mapButton_->IsPressed() && randomButton_->IsPressed())) {
                     randomMapAndRandomPressed_ = true;
                     // Reset parameters.
                     for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
@@ -754,7 +723,6 @@ public:
                 randomMapAndRandomTrigger_.Process(0);
                 undoRedoRandomTrigger_.Process(0);
             }
-            break;
         }
     }
     
@@ -812,6 +780,10 @@ public:
             faders_[i]->Read(ParamFader(i));
         }
         
+        for (size_t i = 0; i < PARAM_SWITCH_LAST; i++) {
+            switches_[i]->Read(ParamSwitch(i));
+        }
+
         for (size_t i = 0; i < PARAM_CV_LAST; i++) {
             cvs_[i]->Read(ParamCv(i));
         }
@@ -827,6 +799,15 @@ public:
         HandleLeds();
         HandleCatchUp();
         HandleLedButtons();
+
+        // Value: 0 = CV, 0.33 = RND, 1.00 = MOD
+        selectedMapTarget_ = FuncMode::FUNC_MODE_CV;
+        if (patchCtrls_->mapTarget > 0.9f) {
+            selectedMapTarget_ = FuncMode::FUNC_MODE_MOD;
+        }
+        else if (patchCtrls_->mapTarget > 0.2f) {
+            selectedMapTarget_ = FuncMode::FUNC_MODE_RND;
+        }
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
@@ -853,11 +834,7 @@ public:
                     SaveParametersConfig(FuncMode::FUNC_MODE_MOD);
                     SaveParametersConfig(FuncMode::FUNC_MODE_CV);
                     SaveParametersConfig(FuncMode::FUNC_MODE_RND);
-                    LedName activeLed = LED_MOD_AMOUNT;
-                    if (shiftButton_->IsOn()) {
-                        activeLed = LED_CV_AMOUNT;
-                    }
-                    leds_[activeLed]->Blink(2, false, !leds_[activeLed]->IsOn());
+                    leds_[LED_MAP]->Blink(2, false, !leds_[LED_MAP]->IsOn());
                     fadeOutOutput_ = false;
                     fadeInOutput_ = true;
                     saving_ = false;

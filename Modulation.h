@@ -2,6 +2,7 @@
 
 #include "Commons.h"
 #include "RampOscillator.h"
+#include "SineOscillator.h"
 #include "SquareWaveOscillator.h"
 #include "MorphingOscillator.h"
 #include "NoiseOscillator.h"

@@ -27,19 +27,17 @@
         out += (error > 0 ? positive : negative) * error; \
     }
 
-#define MOD_CV_BUTTON PUSHBUTTON
-#define MOD_CV_GREEN_LED_PARAM GREEN_BUTTON
-#define MOD_CV_RED_LED_PARAM RED_BUTTON
-#define RANDOM_BUTTON BUTTON_1
-#define RANDOM_MAP_BUTTON BUTTON_2
-#define RANDOM_IN BUTTON_3
-#define SYNC_IN BUTTON_4
+#define RANDOM_BUTTON        BUTTON_1
+#define MAP_BUTTON           BUTTON_2
+#define RANDOM_IN            BUTTON_3
+#define SYNC_IN              BUTTON_4
 #define INPUT_PEAK_LED_PARAM BUTTON_5
-#define SHIFT_BUTTON BUTTON_6
-#define IN_DETEC BUTTON_7
+#define SHIFT_BUTTON         BUTTON_6
+#define IN_DETEC             BUTTON_7
 
+#define MAP_SELECTOR    PARAMETER_AE
 #define INPUT_LED_PARAM PARAMETER_AF
-#define MOD_LED_PARAM PARAMETER_AG
+#define MOD_LED_PARAM   PARAMETER_AG
 
 constexpr float kEqualCrossFadeP = 1.f;
 constexpr float kEps = 0.0001f; // Commodity for minimum float
@@ -192,6 +190,8 @@ struct PatchCtrls
     float modLevel;
     float modSpeed;
     float modType;
+
+    float mapTarget;
 };
 
 struct PatchCvs

@@ -12,10 +12,8 @@ enum LedName
     LED_SYNC,
     LED_MOD,
     LED_RANDOM,
-    LED_RANDOM_MAP,
+    LED_MAP,
     LED_SHIFT,
-    LED_MOD_AMOUNT,
-    LED_CV_AMOUNT,
     LED_LAST
 };
 
