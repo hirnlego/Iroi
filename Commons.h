@@ -50,10 +50,10 @@ constexpr float kOne = 0.975f; //4095.f / 4096.f;
 constexpr float k2One = kOne * 2;
 static const float kOneHalf = kOne / 2.f;
 
-constexpr float kCvLpCoeff = 0.7f;
+constexpr float kCvLpCoeff = 0.f; // Was 0.7f
 constexpr float kCvOffset = -0.46035f;
 constexpr float kCvMult = 1.485f;
-constexpr float kCvDelta = 0.02f;
+constexpr float kCvDelta = 0.f; // Was 0.02f
 constexpr float kCvMinThreshold = 0.007f;
 
 constexpr int kStartupWaitSamples = 450; // 300ms (1500 = 1s @ block rate)

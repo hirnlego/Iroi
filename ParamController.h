@@ -693,8 +693,8 @@ public:
     static FaderController* create(
         PatchState* patchState,
         float* param,
-        float lpCoeff = 0.02f,
-        float movementDelta = 0.01f,
+        float lpCoeff = 0.f,
+        float movementDelta = 0.f,
         float scale = 3.f
     ) {
         return new FaderController(patchState, param, lpCoeff, movementDelta, scale);
@@ -958,17 +958,15 @@ public:
     }
 };
 
-class RecordButtonController
+class MapButtonController
 {
 private:
     Led* led_;
     TGate trigger_;
     FuncMode funcMode_;
 
-    bool* on_;
+    bool on_;
 
-    bool mainOn_;
-    bool funcOn_;
     bool latched_;
     bool hold_;
     bool pressed_;
@@ -978,17 +976,14 @@ private:
 
     int samplesSincePressed_;
     int samplesSinceHeld_;
-
 public:
-    RecordButtonController(Led* led)
+    MapButtonController(Led* led)
     {
         led_ = led;
 
         funcMode_ = FuncMode::FUNC_MODE_NONE;
-        mainOn_ = false;
-        funcOn_ = false;
-        on_ = &mainOn_;
 
+        on_ = false;
         hold_ = false;
         pressed_ = false;
         trig_ = false;
@@ -999,21 +994,21 @@ public:
         samplesSincePressed_ = 0;
         samplesSinceHeld_ = 0;
     }
-    ~RecordButtonController() {}
+    ~MapButtonController() {}
 
-    static RecordButtonController* create(Led* led)
+    static MapButtonController* create(Led* led)
     {
-        return new RecordButtonController(led);
+        return new MapButtonController(led);
     }
 
-    static void destroy(RecordButtonController* obj)
+    static void destroy(MapButtonController* obj)
     {
         delete obj;
     }
 
     inline bool IsOn()
     {
-        return *on_;
+        return on_;
     }
 
     // True when the button is pressed, false when released.
@@ -1036,13 +1031,13 @@ public:
 
     inline void Set(bool on)
     {
-        *on_ = on;
-        led_->Set(on);
+        on_ = on;
+        led_->Set(on_);
     }
 
     inline void Toggle()
     {
-        Set(!*on_);
+        Set(!on_);
     }
 
     inline void SetFuncMode(FuncMode funcMode)
@@ -1051,35 +1046,10 @@ public:
         if (!pressed_)
         {
             funcMode_ = funcMode;
-            hold_ = false;
+            hold_ = false;            
             doBlink_ = false;
             trig_ = false;
-            if (FuncMode::FUNC_MODE_NONE == funcMode_)
-            {
-                // on_ now points to the main parameter
-                on_ = &mainOn_;
-
-                if (mainOn_)
-                {
-                    // While recording, blink the led.
-                    led_->Blink(0);
-                    led_->On();
-                }
-            }
-            else
-            {
-                // The FUNC parameter status is never actually set within this
-                // controller, only from outside, so we leave it off.
-                funcOn_ = 0;
-                // on_ now points to the selected FUNC parameter
-                on_ = &funcOn_;
-
-                if (mainOn_)
-                {
-                    // While recording, blink the led.
-                    led_->Blink(-1);
-                }
-            }
+            Set(on_);
         }
     }
 
@@ -1091,9 +1061,8 @@ public:
         if (pressed_)
         {
             Toggle();
-            // Blink the led once only when in a func mode, unless the main
-            // parameter is on (recording).
-            if (FuncMode::FUNC_MODE_NONE != funcMode_ && !mainOn_)
+            // Blink the led once only when in a func mode.
+            if (FuncMode::FUNC_MODE_NONE != funcMode_)
             {
                 trig_ = true;
                 doBlink_ = true;
@@ -1106,6 +1075,11 @@ public:
     // Called at block rate
     inline void Process()
     {
+        if (!on_)
+        {
+            return;
+        }
+
         if (doBlink_)
         {
             if (!trigger_.Process(trig_))
@@ -1117,10 +1091,9 @@ public:
         }
         else if (pressed_)
         {
-            int limit = FuncMode::FUNC_MODE_NONE == funcMode_ ? kGateLimit : kHoldLimit;
             if (hold_)
             {
-                if (samplesSinceHeld_ < limit)
+                if (samplesSinceHeld_ < kGateLimit)
                 {
                     // Holding.
                     samplesSinceHeld_++;
@@ -1132,7 +1105,7 @@ public:
             }
             else
             {
-                if (samplesSincePressed_ < limit)
+                if (samplesSincePressed_ < kGateLimit)
                 {
                     // Holding.
                     samplesSincePressed_++;
@@ -1148,10 +1121,7 @@ public:
         else if (hold_)
         {
             // Released.
-            if (FuncMode::FUNC_MODE_NONE == funcMode_)
-            {
-                Toggle();
-            }
+            Set(!on_);
             hold_ = false;
             gate_ = false;
         }
@@ -1426,150 +1396,6 @@ public:
             Set(!on_);
             samplesSincePressed_ = 0;
             samplesSinceHeld_ = 0;
-        }
-    }
-
-    // Called at block rate
-    inline void Process()
-    {
-        if (!on_)
-        {
-            return;
-        }
-
-        if (pressed_)
-        {
-            if (hold_)
-            {
-                if (samplesSinceHeld_ < kGateLimit)
-                {
-                    // Holding.
-                    samplesSinceHeld_++;
-                }
-                else
-                {
-                    gate_ = false;
-                }
-            }
-            else
-            {
-                if (samplesSincePressed_ < kGateLimit)
-                {
-                    // Holding.
-                    samplesSincePressed_++;
-                }
-                else
-                {
-                    hold_ = true;
-                    gate_ = true;
-                    samplesSinceHeld_ = 0;
-                }
-            }
-        }
-        else if (hold_)
-        {
-            // Released.
-            Set(!on_);
-            hold_ = false;
-            gate_ = false;
-        }
-    }
-};
-
-class RandomMapButtonController
-{
-private:
-    Led* led_;
-    FuncMode funcMode_;
-
-    bool on_;
-    bool latched_;
-    bool hold_;
-    bool pressed_;
-    bool trig_;
-    bool gate_;
-
-    int samplesSincePressed_;
-    int samplesSinceHeld_;
-
-public:
-    RandomMapButtonController(Led* led)
-    {
-        led_ = led;
-
-        funcMode_ = FuncMode::FUNC_MODE_NONE;
-
-        on_ = false;
-        hold_ = false;
-        pressed_ = false;
-        trig_ = false;
-
-        samplesSincePressed_ = 0;
-        samplesSinceHeld_ = 0;
-    }
-    ~RandomMapButtonController() {}
-
-    static RandomMapButtonController* create(Led* led)
-    {
-        return new RandomMapButtonController(led);
-    }
-
-    static void destroy(RandomMapButtonController* obj)
-    {
-        delete obj;
-    }
-
-    inline bool IsOn()
-    {
-        return on_;
-    }
-
-    // True when the button is pressed, false when released.
-    inline bool IsPressed()
-    {
-        return pressed_;
-    }
-
-    // True when the button is being kept pressed for some time, false when released.
-    inline bool IsHeld()
-    {
-        return hold_;
-    }
-
-    // True when the button is being kept pressed for some time, false after a little more.
-    inline bool IsGate()
-    {
-        return gate_;
-    }
-
-    inline void Set(bool on)
-    {
-        on_ = on;
-        led_->Set(on_);
-    }
-
-    inline void Trig(bool pressed)
-    {
-        pressed_ = pressed;
-
-        // Act only when the led button is pressed.
-        if (pressed_)
-        {
-            Set(!on_);
-            samplesSincePressed_ = 0;
-            samplesSinceHeld_ = 0;
-        }
-    }
-
-    inline void SetFuncMode(FuncMode funcMode)
-    {
-        // Set func mode only if the led button isn't pressed.
-        if (!pressed_)
-        {
-            funcMode_ = funcMode;
-            hold_ = false;
-            trig_ = false;
-            Set(on_);
         }
     }
 

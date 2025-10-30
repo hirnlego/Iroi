@@ -34,7 +34,7 @@ private:
     FaderController* faders_[PARAM_FADER_LAST];
     CvController* cvs_[PARAM_CV_LAST];
     SwitchController* switches_[PARAM_SWITCH_LAST];
-    RandomMapButtonController* mapButton_;
+    MapButtonController* mapButton_;
     RandomButtonController* randomButton_;
     ShiftButtonController* shiftButton_;
     Led* leds_[LED_LAST];
@@ -42,17 +42,17 @@ private:
 
     CatchUpController* movingParam_;
 
-    Schmitt undoRedoRandomTrigger_, randomMapAndRandomTrigger_,
+    Schmitt undoRedoRandomTrigger_, mapAndRandomTrigger_,
         modTypeLockTrigger_, modSpeedLockTrigger_, saveTrigger_;
     Schmitt filterModeTrigger_, filterPositionTrigger_;
 
-    int samplesSinceShiftPressed_, samplesSinceRandomMapOrRandomPressed_,
+    int samplesSinceShiftPressed_, samplesSinceMapOrRandomPressed_,
         samplesSinceMapButtonPressed_, samplesSinceRandomMapInReceived_,
         samplesSinceRandomPressed_;
 
     int hwRevision_;
 
-    bool randomMapAndRandomPressed_, fadeOutOutput_,
+    bool mapAndRandomPressed_, fadeOutOutput_,
         fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
         undoRedo_, doRandomSlew_, startup_, mapActive_;
 
@@ -71,11 +71,11 @@ public:
         movingParam_ = NULL;
 
         samplesSinceShiftPressed_ = 0;
-        samplesSinceRandomMapOrRandomPressed_ = 0;
+        samplesSinceMapOrRandomPressed_ = 0;
         samplesSinceMapButtonPressed_ = 0;
         samplesSinceRandomPressed_ = 0;
 
-        randomMapAndRandomPressed_ = false;
+        mapAndRandomPressed_ = false;
         fadeOutOutput_ = false;
         fadeInOutput_ = false;
         parameterChangedSinceLastSave_ = false;
@@ -284,7 +284,7 @@ public:
             MidiController::create(&patchCvs_->ambienceSpacetime,
                 ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME_CV, 0, 0.5f, 0.6666667f);
 
-        mapButton_ = RandomMapButtonController::create(leds_[LED_MAP]);
+        mapButton_ = MapButtonController::create(leds_[LED_MAP]);
         randomButton_ = RandomButtonController::create(leds_[LED_RANDOM]);
         shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
     }
@@ -310,7 +310,7 @@ public:
         for (size_t i = 0; i < PARAM_MIDI_LAST; i++) {
             MidiController::destroy(midiOuts_[i]);
         }
-        RandomMapButtonController::destroy(mapButton_);
+        MapButtonController::destroy(mapButton_);
         RandomButtonController::destroy(randomButton_);
         ShiftButtonController::destroy(shiftButton_);
     }
@@ -539,7 +539,9 @@ public:
             break;
 
         case SHIFT_BUTTON:
-            if (!mapActive_) {
+            // If mapping is active, disable shift.
+            if (!mapActive_) 
+            {
                 shiftButton_->Trig(on);
             }
             break;
@@ -572,7 +574,7 @@ public:
     void HandleLeds() {
         float level = patchState_->inputLevel.getMean();
         if (level < 0.7f) {
-            leds_[LED_INPUT]->Set(Map(level, 0.f, 1.f, 0.5f, 1.f));
+            leds_[LED_INPUT]->Set(Map(level, 0.f, 1.f, 0.4f, 1.f));
             leds_[LED_INPUT_PEAK]->Off();
         }
         else {
@@ -618,7 +620,7 @@ public:
         mapActive_ = mapButton_->IsOn() && !shiftButton_->IsOn();
 
         FuncMode funcMode = patchState_->funcMode;
-        if (mapButton_->IsPressed()) {
+        if (mapButton_->IsPressed() && !shiftButton_->IsOn()) {
             // Handle long press for saving.
             if (samplesSinceMapButtonPressed_ < kSaveLimit) {
                 samplesSinceMapButtonPressed_++;
@@ -631,10 +633,6 @@ public:
                 fadeOutOutput_ = true;
                 leds_[LED_MAP]->Off();
             }
-        }
-        else if (shiftButton_->IsOn() && mapButton_->IsOn() && !randomButton_->IsOn()) {
-            // Only SHIFT button and MAP_BUTTON are on.
-            // TODO: Clear the mappings selected by the switch.
         }
         else if (shiftButton_->IsOn() && !mapButton_->IsOn() && !randomButton_->IsOn()) {
             // Only SHIFT button is on.
@@ -693,11 +691,11 @@ public:
         if (patchState_->funcMode != FUNC_MODE_NONE)
         {
             if (mapButton_->IsPressed() || randomButton_->IsPressed()) {
-                if (samplesSinceRandomMapOrRandomPressed_ < kResetLimit) {
-                    samplesSinceRandomMapOrRandomPressed_++;
+                if (samplesSinceMapOrRandomPressed_ < kResetLimit) {
+                    samplesSinceMapOrRandomPressed_++;
                 }
-                else if (randomMapAndRandomTrigger_.Process(mapButton_->IsPressed() && randomButton_->IsPressed())) {
-                    randomMapAndRandomPressed_ = true;
+                else if (mapAndRandomTrigger_.Process(mapButton_->IsPressed() && randomButton_->IsPressed())) {
+                    mapAndRandomPressed_ = true;
                     // Reset parameters.
                     for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
                         CatchUpController* ctrl = (i < PARAM_KNOB_LAST)
@@ -706,10 +704,10 @@ public:
                         ctrl->Reset();
                     }
                 }
-                // randomMapAndRandomPressed_ assures that if the last operation
+                // mapAndRandomPressed_ assures that if the last operation
                 // was the reset of parameters, the next operation may be
                 // performed only if the buttons are released.
-                else if (!randomMapAndRandomPressed_) {
+                else if (!mapAndRandomPressed_) {
                     if (FuncMode::FUNC_MODE_ALT == patchState_->funcMode) {
                         if (!undoRedo_ && randomButton_->IsOn()) {
                             undoRedo_ = true;
@@ -718,9 +716,9 @@ public:
                 }
             }
             else {
-                samplesSinceRandomMapOrRandomPressed_ = 0;
-                randomMapAndRandomPressed_ = false;
-                randomMapAndRandomTrigger_.Process(0);
+                samplesSinceMapOrRandomPressed_ = 0;
+                mapAndRandomPressed_ = false;
+                mapAndRandomTrigger_.Process(0);
                 undoRedoRandomTrigger_.Process(0);
             }
         }

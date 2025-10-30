@@ -28,11 +28,6 @@ private:
 
     Modulation* modulation_;
 
-    AudioBuffer* input_;
-    AudioBuffer* resample_;
-    AudioBuffer* osc1Out_;
-    AudioBuffer* osc2Out_;
-
     StereoDcBlockingFilter* inputDcFilter_;
     StereoDcBlockingFilter* outputDcFilter_;
 
@@ -56,11 +51,6 @@ public:
 
         limiter_ = Limiter::create();
 
-        input_ = AudioBuffer::create(2, patchState_->blockSize);
-        resample_ = AudioBuffer::create(2, patchState_->blockSize);
-        osc1Out_ = AudioBuffer::create(2, patchState_->blockSize);
-        osc2Out_ = AudioBuffer::create(2, patchState_->blockSize);
-
         for (size_t i = 0; i < 2; i++)
         {
             inEnvFollower_[i] = EnvFollower::create();
@@ -72,10 +62,6 @@ public:
     }
     ~Iroi()
     {
-        AudioBuffer::destroy(input_);
-        AudioBuffer::destroy(resample_);
-        AudioBuffer::destroy(osc1Out_);
-        AudioBuffer::destroy(osc2Out_);
         Filter::destroy(filter_);
         Resonator::destroy(resonator_);
         Echo::destroy(echo_);
@@ -163,14 +149,14 @@ public:
             filter_->process(buffer, buffer);
         }
 
+        /*
         outputDcFilter_->process(buffer, buffer);
-
+        
         buffer.multiply(kOutputMakeupGain);
         limiter_->ProcessSoft(buffer, buffer);
-
-        buffer.multiply(patchState_->outLevel);
         
-        resample_->copyFrom(buffer);
+        buffer.multiply(patchState_->outLevel);
+        */
     }
 };
 

@@ -80,7 +80,7 @@ public:
         {
             filter_ = FilterType::LP;
             lpfMix_ = Map(value, 0.f, 0.45f, 0.f, 1.f);
-            freq_ = Map(lpfMix_, 0.f, 1.f, 500.f, 2000.f);
+            freq_ = Map(lpfMix_, 0.f, 1.f, 20.f, 100.f);
             UpdateFilter();
             amp_ = Map(lpfMix_, 0.f, 1.f, kDjFilterMakeupGainMax, kDjFilterMakeupGainMin);
         }
@@ -88,7 +88,7 @@ public:
         {
             filter_ = FilterType::HP;
             hpfMix_ = Map(value, 0.55f, 1.f, 0.f, 1.f);
-            freq_ = Map(hpfMix_, 0.f, 1.f, 1000.f, 4000.f);
+            freq_ = Map(hpfMix_, 0.f, 1.f, 2000.f, 4000.f);
             UpdateFilter();
             amp_ = Map(hpfMix_, 0.f, 1.f, kDjFilterMakeupGainMin, kDjFilterMakeupGainMax);
         }

@@ -1,3 +1,5 @@
+- fix mapping
+- fix input led
 - modulation default free
 - delay time default free
 - autopan default sync with modulation
