@@ -11,9 +11,6 @@
 #include "DcBlockingFilter.h"
 #include "SmoothValue.h"
 #include "Modulation.h"
-#include "Limiter.h"
-#include "Compressor.h"
-#include "BiquadFilter.h"
 
 class Iroi
 {
@@ -26,10 +23,6 @@ private:
     Resonator* resonator_;
     Echo* echo_;
     Ambience* ambience_;
-    Limiter* limiter_;
-
-    BiquadFilter* lpf_[2];
-    Compressor* comp_;
     
     Modulation* modulation_;
 
@@ -56,20 +49,10 @@ public:
 
         modulation_ = Modulation::create(patchCtrls_, patchCvs_, patchState_);
 
-        limiter_ = Limiter::create();
-        comp_ = Compressor::create(patchState_->sampleRate);
-        comp_->setAttack(20.f);
-        comp_->setRelease(100.f);
-        comp_->setRatio(20.f);
-        comp_->setThreshold(-35.f);
-
         for (size_t i = 0; i < 2; i++)
         {
             outEnvFollower_[i] = EnvFollower::create();
             outEnvFollower_[i]->setLambda(0.9f);
-
-            lpf_[i] = BiquadFilter::create(patchState_->sampleRate);
-            lpf_[i]->setHighShelf(8000.f, -6.f);
         }
 
         inputDcFilter_ = StereoDcBlockingFilter::create();
@@ -84,13 +67,10 @@ public:
         Echo::destroy(echo_);
         Ambience::destroy(ambience_);
         Modulation::destroy(modulation_);
-        Limiter::destroy(limiter_);
-        Compressor::destroy(comp_);
 
         for (size_t i = 0; i < 2; i++)
         {
             EnvFollower::destroy(outEnvFollower_[i]);
-            BiquadFilter::destroy(lpf_[i]);
         }
     }
 
@@ -119,23 +99,6 @@ public:
         const int size = buffer.getSize();
 
         modulation_->Process();
-
-        //buffer.multiply(kInputGain);
-
-        //left.clip(0.01f);
-        //right.clip(0.01f);
-
-        //lpf_[LEFT_CHANNEL]->process(buffer.getSamples(LEFT_CHANNEL), buffer.getSamples(LEFT_CHANNEL));
-        //lpf_[RIGHT_CHANNEL]->process(buffer.getSamples(RIGHT_CHANNEL), buffer.getSamples(RIGHT_CHANNEL));
-
-
-        /*
-        limiter_->ProcessSoft(buffer, buffer);
-        comp_->setRatio(20.f * patchCtrls_->echoDensity);
-        comp_->setThreshold(-100.f * patchCtrls_->echoRepeats);
-        debugMessage("c", comp_->getRatio(), comp_->getThreshold());
-        comp_->process(buffer, buffer);
-        */
 
         if (patchCtrls_->filterPosition < 0.25f)
         {
@@ -184,16 +147,9 @@ public:
             filter_->process(buffer, buffer);
         }
 
-        //outputDcFilter_->process(buffer, buffer);
-        
-        /*
-        buffer.multiply(kOutputMakeupGain);
-        limiter_->ProcessSoft(buffer, buffer);
-        
-        buffer.multiply(patchState_->outLevel);
-        */
+        buffer.multiply(kOutputMakeupGain * patchState_->outLevel);
 
-        // Input leds.
+        // Level LED.
         for (size_t i = 0; i < size; i++)
         {
             patchState_->outputLevel[i] = Mix2(outEnvFollower_[0]->process(left[i]), outEnvFollower_[1]->process(right[i]));

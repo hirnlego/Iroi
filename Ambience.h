@@ -401,6 +401,8 @@ private:
             amp_ = MapExpo(spaceTime_, 0.f, 1.f, kAmbienceGainMin, kAmbienceGainMax);
         }
 
+        amp_ = 1.f;
+
         SetLowDamp(lowDamp);
         SetHighDamp(highDamp);
         SetSize(size);
@@ -434,7 +436,8 @@ public:
             ef_[i] = EnvFollower::create();
             dc_[i] = DcBlockingFilter::create();
             comp_[i] = Compressor::create(patchState_->sampleRate);
-            comp_[i]->setThreshold(-20);
+            comp_[i]->setThreshold(-30);
+            comp_[i]->setRatio(2);
         }
 
         dampFilters_[LEFT_CHANNEL]->SetHp(112);
@@ -525,8 +528,16 @@ public:
 
             x += xi_;
 
-            //left = comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain;
-            //right = comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain;
+            /*
+            comp_[LEFT_CHANNEL]->setThreshold(-40 * patchCtrls_->echoRepeats);
+            comp_[LEFT_CHANNEL]->setRatio(10 * patchCtrls_->echoDensity);
+            comp_[RIGHT_CHANNEL]->setThreshold(-40 * patchCtrls_->echoRepeats);
+            comp_[RIGHT_CHANNEL]->setRatio(10 * patchCtrls_->echoDensity);
+            
+            debugMessage("c",comp_[LEFT_CHANNEL]->getThreshold(),comp_[LEFT_CHANNEL]->getRatio() );
+            */
+            left = comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain;
+            right = comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain;
 
             leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.8f);
             rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.8f);

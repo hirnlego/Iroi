@@ -119,7 +119,7 @@ constexpr int kEchoCompThresMax = -16;
 constexpr float kEchoMakeupGain = 1.6f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;
-constexpr int kAmbienceNofDiffusers = 5;
+constexpr int kAmbienceNofDiffusers = 4;
 constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
 constexpr float kAmbienceHighDampMin = -0.5f;
@@ -128,13 +128,12 @@ constexpr float kAmbienceGainMin = 1.f;
 constexpr float kAmbienceGainMax = 1.2f;
 constexpr float kAmbienceRevGainMin = 1.4f;
 constexpr float kAmbienceRevGainMax = 1.2f;
-constexpr float kAmbienceMakeupGain = 1.6f;
+constexpr float kAmbienceMakeupGain = 3.f;
 constexpr float kAmbienceInfiniteFeedbackThreshold = 0.99f;
 constexpr float kAmbienceInfiniteFeedbackLevel = 1.2f;
 
-
 static const float kOutputFadeInc = 1.f / 16.f;
-constexpr float kOutputMakeupGain = 6.f;
+constexpr float kOutputMakeupGain = 1.2f;
 
 constexpr float kParamCatchUpDelta = 0.005f;
 
