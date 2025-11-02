@@ -30,7 +30,7 @@ const PatchParameterId paramKnobMap[PARAM_KNOB_LAST] = {
     PARAMETER_BE,
     PARAMETER_BD,
     PARAMETER_BA,
-    PARAMETER_BH,
+    PARAMETER_BC,
     PARAMETER_AA,
     PARAMETER_AB,
 };
@@ -359,7 +359,7 @@ public:
 
             case PARAM_STATE_MORPHING:
             {
-                *value_ = *value_ * (1.f - patchState_->randomSlew) + nextValue_ * patchState_->randomSlew;
+                ONE_POLE(*value_, nextValue_, patchState_->randomSlew);
                 slewInc_ += patchState_->randomSlew;
 
                 if (slewInc_ >= 1.f)

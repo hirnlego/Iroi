@@ -50,10 +50,10 @@ constexpr float kOne = 0.975f; //4095.f / 4096.f;
 constexpr float k2One = kOne * 2;
 static const float kOneHalf = kOne / 2.f;
 
-constexpr float kCvLpCoeff = 0.f; // Was 0.7f
+constexpr float kCvLpCoeff = 0.7f;
 constexpr float kCvOffset = -0.46035f;
 constexpr float kCvMult = 1.485f;
-constexpr float kCvDelta = 0.f; // Was 0.02f
+constexpr float kCvDelta = 0.02f;
 constexpr float kCvMinThreshold = 0.007f;
 
 constexpr int kStartupWaitSamples = 450; // 300ms (1500 = 1s @ block rate)
@@ -77,6 +77,8 @@ static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
 constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples required to detect a change
 
+constexpr float kInputGain = 0.2f;
+
 constexpr float kDjFilterMakeupGainMin = 1.f;
 constexpr float kDjFilterMakeupGainMax = 1.4f;
 
@@ -95,28 +97,28 @@ constexpr float kFilterCombGainMax = 0.2f;
 
 constexpr float kResoGainMin = 0.5f;
 constexpr float kResoGainMax = 1.2f;
-constexpr float kResoMakeupGain = 1.f;
+constexpr float kResoMakeupGain = 0.7f;
 constexpr int32_t kResoBufferSize = 2400;
-constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
-constexpr float kResoInfiniteFeedbackLevel = 1.001f;
+constexpr float kResoInfiniteFeedbackThreshold = 0.99f;
+constexpr float kResoInfiniteFeedbackLevel = 1.1f;
 
 constexpr int32_t kEchoFadeSamples = 2400; // 50 ms @ audio rate
 constexpr int32_t kEchoMinLengthSamples = 480; // 10 ms @ audio rate
 constexpr int32_t kEchoMaxLengthSamples = 192000; // 4 seconds @ audio rate
 constexpr int kEchoTaps = 4;
 const float kEchoTapsRatios[kEchoTaps] = { 0.75f, 0.25f, 0.375f, 1.f };  // TAP_LEFT_A (1/2 dot), TAP_LEFT_B (1/8), TAP_RIGHT_A (1/8 dot), TAP_RIGHT_B (1)
-const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
+const float kEchoTapsFeedbacks[kEchoTaps] = { 0.345f, 0.645f, 0.545f, 0.445f };
 const int32_t kEchoMaxExternalClockSamples = kEchoMaxLengthSamples / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
-constexpr float kEchoInfiniteFeedbackThreshold = 0.999f;
-constexpr float kEchoInfiniteFeedbackLevel = 1.001f;
+constexpr float kEchoInfiniteFeedbackThreshold = 0.985f;
+constexpr float kEchoInfiniteFeedbackLevel = 1.2f;
 constexpr int kEchoCompThresMin = -16;
 constexpr int kEchoCompThresMax = -22;
-constexpr float kEchoMakeupGain = 1.2f;
+constexpr float kEchoMakeupGain = 1.f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;
-constexpr int kAmbienceNofDiffusers = 4;
+constexpr int kAmbienceNofDiffusers = 6;
 constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
 constexpr float kAmbienceHighDampMin = -0.5f;

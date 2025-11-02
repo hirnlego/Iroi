@@ -19,6 +19,7 @@ private:
     FilterType filter_ = FilterType::NO_FILTER;
     
     float freq_;
+    float reso_;
     float lpfMix_;
     float hpfMix_;
     float amp_;
@@ -28,12 +29,12 @@ private:
         switch (filter_)
         {
         case FilterType::LP:
-            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, 0.55f);
-            lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, 0.55f);
+            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, reso_);
+            lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, reso_);
             break;
         case FilterType::HP:
-            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, 0.55f);
-            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, 0.55f);
+            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, reso_);
+            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, reso_);
             break;
 
         default:
@@ -51,6 +52,7 @@ public:
         }
 
         filter_ = FilterType::NO_FILTER;
+        reso_ = 0.f;
         lpfMix_ = 1.f;
         hpfMix_ = 0.f;
         amp_ = 1.f;
@@ -80,7 +82,8 @@ public:
         {
             filter_ = FilterType::LP;
             lpfMix_ = Map(value, 0.f, 0.45f, 0.f, 1.f);
-            freq_ = Map(lpfMix_, 0.f, 1.f, 20.f, 100.f);
+            freq_ = Map(lpfMix_, 0.f, 1.f, 40.f, 200.f);
+            reso_ = Map(lpfMix_, 0.f, 1.f, FilterStage::BUTTERWORTH_Q, 0.f);
             UpdateFilter();
             amp_ = Map(lpfMix_, 0.f, 1.f, kDjFilterMakeupGainMax, kDjFilterMakeupGainMin);
         }
@@ -89,6 +92,7 @@ public:
             filter_ = FilterType::HP;
             hpfMix_ = Map(value, 0.55f, 1.f, 0.f, 1.f);
             freq_ = Map(hpfMix_, 0.f, 1.f, 2000.f, 4000.f);
+            reso_ = Map(lpfMix_, 0.f, 1.f, 0.f, FilterStage::BUTTERWORTH_Q);
             UpdateFilter();
             amp_ = Map(hpfMix_, 0.f, 1.f, kDjFilterMakeupGainMin, kDjFilterMakeupGainMax);
         }

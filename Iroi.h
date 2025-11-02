@@ -129,6 +129,8 @@ public:
             patchState_->filterPositionFlag = false;
         }
 
+        buffer.multiply(kInputGain);
+
         if (FilterPosition::POSITION_1 == filterPosition_)
         {
             filter_->process(buffer, buffer);
@@ -149,14 +151,12 @@ public:
             filter_->process(buffer, buffer);
         }
 
-        /*
         outputDcFilter_->process(buffer, buffer);
         
         buffer.multiply(kOutputMakeupGain);
         limiter_->ProcessSoft(buffer, buffer);
         
         buffer.multiply(patchState_->outLevel);
-        */
     }
 };
 

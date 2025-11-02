@@ -70,19 +70,8 @@ private:
 
         float r = repeats_;
 
-        infinite_ = false;
-
-        // Infinite feedback.
-        if (r > kEchoInfiniteFeedbackThreshold)
-        {
-            r = kEchoInfiniteFeedbackLevel;
-            infinite_ = true;
-        }
-        else if (r > 0.99f)
-        {
-            r = 1.f;
-        }
-
+        infinite_ = r > kEchoInfiniteFeedbackThreshold;
+        
         SetLevel(TAP_LEFT_A, r * kEchoTapsFeedbacks[TAP_LEFT_A]);
         SetLevel(TAP_LEFT_B, r * kEchoTapsFeedbacks[TAP_LEFT_B]);
         SetLevel(TAP_RIGHT_A, r * kEchoTapsFeedbacks[TAP_RIGHT_A]);
@@ -247,12 +236,6 @@ public:
             float leftFb = HardClip(outs_[TAP_LEFT_A] * levels_[TAP_LEFT_A] + outs_[TAP_RIGHT_A] * levels_[TAP_RIGHT_A]);
             float rightFb = HardClip(outs_[TAP_LEFT_B] * levels_[TAP_LEFT_B] + outs_[TAP_RIGHT_B] * levels_[TAP_RIGHT_B]);
 
-            if (infinite_)
-            {
-                leftFb *= 1.08f - ef_[LEFT_CHANNEL]->process(leftFb);
-                rightFb *= 1.08f - ef_[RIGHT_CHANNEL]->process(rightFb);
-            }
-
             float lIn = Clamp(leftIn[i], -3.f, 3.f);
             float rIn = Clamp(rightIn[i], -3.f, 3.f);
 
@@ -264,6 +247,12 @@ public:
             leftFb += leftFilter;
             rightFb += rightFilter;
 
+            if (infinite_)
+            {
+                leftFb *= kEchoInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftFb);
+                rightFb *= kEchoInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightFb);
+            }
+            
             lines_[TAP_LEFT_A]->write(leftFb);
             lines_[TAP_LEFT_B]->write(leftFb);
             lines_[TAP_RIGHT_A]->write(rightFb);
