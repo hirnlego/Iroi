@@ -96,7 +96,7 @@ public:
         hwRevision_ = 0;
 
         patchState_->funcMode = FuncMode::FUNC_MODE_NONE;
-        patchState_->inputLevel = FloatArray::create(patchState_->blockSize);
+        patchState_->outputLevel = FloatArray::create(patchState_->blockSize);
         patchState_->efModLevel = FloatArray::create(patchState_->blockSize);
         patchState_->outLevel = 1.f;
         patchState_->randomSlew = kRandomSlewSamples;
@@ -113,7 +113,7 @@ public:
         patchCtrls_->filterPosition = 0.f;
         patchCtrls_->modType = 0.f;
         patchCtrls_->resonatorDissonance = 0.f;
-        patchCtrls_->echoFilter = 0.55f; // Center is not 0.5
+        patchCtrls_->echoFilter = 0.5f;
         patchCtrls_->ambienceAutoPan = 0.f;
 
         // Modulation
@@ -289,7 +289,7 @@ public:
         shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
     }
     ~Ui() {
-        FloatArray::destroy(patchState_->inputLevel);
+        FloatArray::destroy(patchState_->outputLevel);
         FloatArray::destroy(patchState_->efModLevel);
         TapTempo::destroy(patchState_->tempo);
         for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
@@ -572,7 +572,7 @@ public:
     }
 
     void HandleLeds() {
-        float level = patchState_->inputLevel.getMean();
+        float level = patchState_->outputLevel.getMean();
         if (level < 0.7f) {
             leds_[LED_INPUT]->Set(Map(level, 0.f, 1.f, 0.4f, 1.f));
             leds_[LED_INPUT_PEAK]->Off();
@@ -827,7 +827,8 @@ public:
             if (patchState_->outLevel <= 0) {
                 patchState_->outLevel = 0;
                 if (saving_) {
-                    SaveParametersConfig(FuncMode::FUNC_MODE_NONE);
+                    // Do not save parameters.
+                    //SaveParametersConfig(FuncMode::FUNC_MODE_NONE);
                     SaveParametersConfig(FuncMode::FUNC_MODE_ALT);
                     SaveParametersConfig(FuncMode::FUNC_MODE_MOD);
                     SaveParametersConfig(FuncMode::FUNC_MODE_CV);

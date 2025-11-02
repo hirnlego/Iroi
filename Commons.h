@@ -80,7 +80,8 @@ constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples
 constexpr float kInputGain = 0.2f;
 
 constexpr float kDjFilterMakeupGainMin = 1.f;
-constexpr float kDjFilterMakeupGainMax = 1.4f;
+constexpr float kDjFilterMakeupGainMaxLp = 2.f;
+constexpr float kDjFilterMakeupGainMaxHp = 2.f;
 
 constexpr float kFilterFreqMin = 10.f;
 constexpr float kFilterFreqMax = 22000.f;
@@ -97,10 +98,10 @@ constexpr float kFilterCombGainMax = 0.2f;
 
 constexpr float kResoGainMin = 0.5f;
 constexpr float kResoGainMax = 1.2f;
-constexpr float kResoMakeupGain = 0.7f;
+constexpr float kResoMakeupGain = 2.4f;
 constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.99f;
-constexpr float kResoInfiniteFeedbackLevel = 1.1f;
+constexpr float kResoInfiniteFeedbackLevel = 1.05f;
 
 constexpr int32_t kEchoFadeSamples = 2400; // 50 ms @ audio rate
 constexpr int32_t kEchoMinLengthSamples = 480; // 10 ms @ audio rate
@@ -113,12 +114,12 @@ constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
 constexpr float kEchoInfiniteFeedbackThreshold = 0.985f;
 constexpr float kEchoInfiniteFeedbackLevel = 1.2f;
-constexpr int kEchoCompThresMin = -16;
-constexpr int kEchoCompThresMax = -22;
-constexpr float kEchoMakeupGain = 1.f;
+constexpr int kEchoCompThresMin = -20;
+constexpr int kEchoCompThresMax = -16;
+constexpr float kEchoMakeupGain = 1.6f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;
-constexpr int kAmbienceNofDiffusers = 6;
+constexpr int kAmbienceNofDiffusers = 5;
 constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
 constexpr float kAmbienceHighDampMin = -0.5f;
@@ -127,7 +128,10 @@ constexpr float kAmbienceGainMin = 1.f;
 constexpr float kAmbienceGainMax = 1.2f;
 constexpr float kAmbienceRevGainMin = 1.4f;
 constexpr float kAmbienceRevGainMax = 1.2f;
-constexpr float kAmbienceMakeupGain = 1.2f;
+constexpr float kAmbienceMakeupGain = 1.6f;
+constexpr float kAmbienceInfiniteFeedbackThreshold = 0.99f;
+constexpr float kAmbienceInfiniteFeedbackLevel = 1.2f;
+
 
 static const float kOutputFadeInc = 1.f / 16.f;
 constexpr float kOutputMakeupGain = 6.f;
@@ -230,7 +234,7 @@ struct PatchState
     float blockRate;
     int blockSize;
 
-    FloatArray inputLevel;
+    FloatArray outputLevel;
     FloatArray efModLevel;
 
     bool modActive;

@@ -66,18 +66,16 @@ private:
 
     void SetRepeats(float value)
     {
-        repeats_ = value;
-
-        float r = repeats_;
-
-        infinite_ = r > kEchoInfiniteFeedbackThreshold;
+        repeats_ = VariableCrossFade(0.f, 1.f, value, kEchoInfiniteFeedbackThreshold - 0.01f);
         
-        SetLevel(TAP_LEFT_A, r * kEchoTapsFeedbacks[TAP_LEFT_A]);
-        SetLevel(TAP_LEFT_B, r * kEchoTapsFeedbacks[TAP_LEFT_B]);
-        SetLevel(TAP_RIGHT_A, r * kEchoTapsFeedbacks[TAP_RIGHT_A]);
-        SetLevel(TAP_RIGHT_B, r * kEchoTapsFeedbacks[TAP_RIGHT_B]);
+        infinite_ = repeats_ > kEchoInfiniteFeedbackThreshold;
+        
+        SetLevel(TAP_LEFT_A, value * kEchoTapsFeedbacks[TAP_LEFT_A]);
+        SetLevel(TAP_LEFT_B, value * kEchoTapsFeedbacks[TAP_LEFT_B]);
+        SetLevel(TAP_RIGHT_A, value * kEchoTapsFeedbacks[TAP_RIGHT_A]);
+        SetLevel(TAP_RIGHT_B, value * kEchoTapsFeedbacks[TAP_RIGHT_B]);
 
-        float thrs = Map(repeats_, 0.f, 1.f, kEchoCompThresMin, kEchoCompThresMax);
+        float thrs = Map(value, 0.f, 1.f, kEchoCompThresMin, kEchoCompThresMax);
         comp_[LEFT_CHANNEL]->setThreshold(thrs);
         comp_[RIGHT_CHANNEL]->setThreshold(thrs);
     }
@@ -122,10 +120,11 @@ private:
             float d = MapExpo(echoDensity_, 0.f, 1.f, kEchoMinLengthSamples, patchState_->clockSamples * kEchoInternalClockMultiplier);
             size_t s = kEchoFadeSamples;
             ParameterInterpolator densityParam(&oldDensity_, d, s);
+            float de = densityParam.Next();
 
             for (size_t i = 0; i < kEchoTaps; i++)
             {
-                SetTapTime(i, densityParam.Next() * kEchoTapsRatios[i]);
+                SetTapTime(i, de * kEchoTapsRatios[i]);
             }
         }
     }
@@ -249,8 +248,8 @@ public:
 
             if (infinite_)
             {
-                leftFb *= kEchoInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftFb);
-                rightFb *= kEchoInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightFb);
+                leftFb *= repeats_ * kEchoInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftFb);
+                rightFb *= repeats_* kEchoInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightFb);
             }
             
             lines_[TAP_LEFT_A]->write(leftFb);

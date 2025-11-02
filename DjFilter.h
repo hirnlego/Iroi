@@ -53,7 +53,7 @@ public:
 
         filter_ = FilterType::NO_FILTER;
         reso_ = 0.f;
-        lpfMix_ = 1.f;
+        lpfMix_ = 0.f;
         hpfMix_ = 0.f;
         amp_ = 1.f;
     }
@@ -81,20 +81,20 @@ public:
         if (value <= 0.45f)
         {
             filter_ = FilterType::LP;
-            lpfMix_ = Map(value, 0.f, 0.45f, 0.f, 1.f);
-            freq_ = Map(lpfMix_, 0.f, 1.f, 40.f, 200.f);
-            reso_ = Map(lpfMix_, 0.f, 1.f, FilterStage::BUTTERWORTH_Q, 0.f);
+            lpfMix_ = Map(value, 0.f, 0.45f, 1.f, 0.f);
+            freq_ = Map(lpfMix_, 0.f, 1.f, 200.f, 30.f);
+            reso_ = Map(lpfMix_, 0.f, 1.f, 0.1f, FilterStage::BUTTERWORTH_Q);
             UpdateFilter();
-            amp_ = Map(lpfMix_, 0.f, 1.f, kDjFilterMakeupGainMax, kDjFilterMakeupGainMin);
+            amp_ = Map(lpfMix_, 0.f, 1.f, kDjFilterMakeupGainMin, kDjFilterMakeupGainMaxLp);
         }
         else if (value >= 0.55f)
         {
             filter_ = FilterType::HP;
             hpfMix_ = Map(value, 0.55f, 1.f, 0.f, 1.f);
             freq_ = Map(hpfMix_, 0.f, 1.f, 2000.f, 4000.f);
-            reso_ = Map(lpfMix_, 0.f, 1.f, 0.f, FilterStage::BUTTERWORTH_Q);
+            reso_ = Map(hpfMix_, 0.f, 1.f, 0.1f, FilterStage::BUTTERWORTH_Q);
             UpdateFilter();
-            amp_ = Map(hpfMix_, 0.f, 1.f, kDjFilterMakeupGainMin, kDjFilterMakeupGainMax);
+            amp_ = Map(hpfMix_, 0.f, 1.f, kDjFilterMakeupGainMin, kDjFilterMakeupGainMaxHp);
         }
         else
         {
@@ -107,8 +107,8 @@ public:
         switch (filter_)
         {
         case FilterType::LP:
-            leftOut = LinearCrossFade(lpfs_[LEFT_CHANNEL]->process(leftIn), leftIn, lpfMix_);
-            rightOut = LinearCrossFade(lpfs_[RIGHT_CHANNEL]->process(rightIn), rightIn, lpfMix_);
+            leftOut = LinearCrossFade(leftIn, lpfs_[LEFT_CHANNEL]->process(leftIn), lpfMix_);
+            rightOut = LinearCrossFade(rightIn, lpfs_[RIGHT_CHANNEL]->process(rightIn), lpfMix_);
             break;
         case FilterType::HP:
             leftOut = LinearCrossFade(leftIn, hpfs_[LEFT_CHANNEL]->process(leftIn), hpfMix_);

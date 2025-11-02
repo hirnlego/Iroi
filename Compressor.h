@@ -47,6 +47,11 @@ public:
     {
         delete obj;
     }
+    
+    float getThreshold()
+    {
+        return threshold_;
+    }
 
     void setThreshold(float value)
     {
@@ -58,6 +63,11 @@ public:
         threshold_ = value;
         thrlin_ = Db2A(threshold_);
         thrlinr_ = 1.f / thrlin_;
+    }
+
+    float getRatio()
+    {
+        return ratio_;
     }
 
     void setRatio(float value)

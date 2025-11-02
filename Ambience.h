@@ -182,9 +182,11 @@ public:
 
         for (int i = 0; i < kAmbienceNofDiffusers - 1; i++)
         {
-            float prev = HardClip(out - outs_[i] * df_);
+            //float prev = HardClip(out - outs_[i] * df_);
+            float prev = out - outs_[i] * df_;
             diffuse_[i]->write(prev);
-            out = HardClip(prev * df_ + outs_[i]);
+            //out = HardClip(prev * df_ + outs_[i]);
+            out = prev * df_ + outs_[i];
             outs_[i] = diffuse_[i]->read(delayTimes_[i], newDelayTimes_[i], x);
         }
 
@@ -313,6 +315,8 @@ private:
     float reverse_;
     float xi_;
 
+    bool infinite_;
+
     Lut<float, 32> decayLUT{0.f, -160.f, Lut<float, 32>::Type::LUT_TYPE_EXPO};
 
     /**
@@ -360,7 +364,8 @@ private:
 
     void SetDecay(float value)
     {
-        decay_ = value;
+        infinite_ = value > kAmbienceInfiniteFeedbackThreshold;
+        decay_ = VariableCrossFade(0.f, 1.f, value, kAmbienceInfiniteFeedbackThreshold - 0.01f);
         SetDecayTime(decayLUT.Quantized(decay_));
     }
 
@@ -443,6 +448,8 @@ public:
         amp_ = 1.f;
         pan_ = 0.5f;
         xi_ = 1.f / patchState_->blockSize;
+
+        infinite_ = false;
     }
     ~Ambience()
     {
@@ -501,27 +508,28 @@ public:
             float leftFb = dampFilters_[LEFT_CHANNEL]->Process(left + diffusers_[RIGHT_CHANNEL]->GetFbOut());
             float rightFb = dampFilters_[RIGHT_CHANNEL]->Process(right + diffusers_[LEFT_CHANNEL]->GetFbOut());
 
-            leftFb = HardClip(left * (1.f - pan_) + leftFb);
-            rightFb = HardClip(right * pan_ + rightFb);
+            leftFb = SoftClip(left * (1.f - pan_) + leftFb);
+            rightFb = SoftClip(right * pan_ + rightFb);
 
-            leftFb *= 1.f - ef_[LEFT_CHANNEL]->process(leftFb);
-            rightFb *= 1.f - ef_[RIGHT_CHANNEL]->process(rightFb);
+            if (infinite_) 
+            {
+                leftFb *= decay_ * kAmbienceInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftFb);
+                rightFb *= decay_ * kAmbienceInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightFb);
+            }
 
             leftFb = dc_[LEFT_CHANNEL]->process(leftFb);
             rightFb = dc_[RIGHT_CHANNEL]->process(rightFb);
 
-            left = diffusers_[LEFT_CHANNEL]->Process(leftFb, x);
-            right = diffusers_[RIGHT_CHANNEL]->Process(rightFb, x);
+            left = diffusers_[LEFT_CHANNEL]->Process(leftFb, x) * 0.5f;
+            right = diffusers_[RIGHT_CHANNEL]->Process(rightFb, x) * 0.5f;
 
             x += xi_;
 
-            float a = Map(decay_, 0.f, 1.f, amp_ * 1.3f, amp_);
+            //left = comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain;
+            //right = comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain;
 
-            left = comp_[LEFT_CHANNEL]->process(left * a) * kAmbienceMakeupGain;
-            right = comp_[RIGHT_CHANNEL]->process(right * a) * kAmbienceMakeupGain;
-
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.4f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.4f);
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.8f);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.8f);
         }
 
         diffusers_[LEFT_CHANNEL]->UpdateDelayTimes();

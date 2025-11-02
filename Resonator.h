@@ -5,6 +5,7 @@
 #include "BiquadFilter.h"
 #include "EnvFollower.h"
 #include "DcBlockingFilter.h"
+#include "Compressor.h"
 
 class Pole
 {
@@ -72,8 +73,8 @@ public:
 
     void SetFeedback(float feedback)
     {
-        feedback_ = feedback;
-        infinite_ = feedback_ > kResoInfiniteFeedbackThreshold;
+        infinite_ = feedback > kResoInfiniteFeedbackThreshold;
+        feedback_ = VariableCrossFade(0.f, 1.f, feedback, kResoInfiniteFeedbackThreshold - 0.01f);
     }
 
     void SetDissonance(float detune)
@@ -98,7 +99,7 @@ public:
         // Handle infinite feedback.
         if (infinite_)
         {
-            mix *= kResoInfiniteFeedbackLevel - ef_[channel]->process(mix);
+            mix *= feedback_ * kResoInfiniteFeedbackLevel - ef_[channel]->process(mix);
         }
 
         delays_[channel]->write(mix);
@@ -118,8 +119,8 @@ public:
         // Handle infinite feedback.
         if (infinite_)
         {
-            leftMix *= kResoInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftMix);
-            rightMix *= kResoInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightMix);
+            leftMix *= feedback_ * kResoInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftMix);
+            rightMix *= feedback_ * kResoInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightMix);
         }
 
         delays_[LEFT_CHANNEL]->write(leftMix);
@@ -180,6 +181,8 @@ private:
     BiquadFilter *notches_[2];
     BiquadFilter *hs_[2];
     EnvFollower *ef_[2];
+
+    Compressor* compressor_;
 
     float amp_;
     float dryWet_;
@@ -298,6 +301,10 @@ public:
             ef_[i] = EnvFollower::create();
         }
 
+        compressor_ = Compressor::create(patchState_->sampleRate);
+        compressor_->setRatio(3.f);
+        compressor_->setAttack(20.f);
+
         amp_ = 1.f;
         range_ = 1.f;
         task_ = 0;
@@ -318,6 +325,8 @@ public:
             BiquadFilter::destroy(hs_[i]);
             EnvFollower::destroy(ef_[i]);
         }
+
+        Compressor::destroy(compressor_);
     }
 
     static Resonator* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
@@ -380,5 +389,7 @@ public:
             leftOut[i] = CheapEqualPowerCrossFade(lIn, oLeft * kResoMakeupGain, patchCtrls_->resonatorVol, 1.4f);
             rightOut[i] = CheapEqualPowerCrossFade(rIn, oRight * kResoMakeupGain, patchCtrls_->resonatorVol, 1.4f);
         }
+
+        compressor_->process(output, output);
     }
 };

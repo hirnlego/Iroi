@@ -80,9 +80,10 @@ public:
         size_t idx = (size_t)d_;
         float y0 = readAt(idx);
         float y1 = readAt(idx + 1);
+        float y2 = readAt(idx + 2);
         float frac = d_ - idx;
 
-        float out = Interpolator::linear(y0, y1, frac) + (-c_ * in);
+        float out = Interpolator::cubic(y0, y1, y2, frac) + (-c_ * in);
 
         line_.setElement(w_, in + (c_ * out));
 
@@ -144,9 +145,10 @@ public:
         delete obj;
     }
 
-    void SetFrequency(float freq)
+    void SetNote(float note)
     {
-        float d = sampleRate_ / freq;
+        float d = Clamp(M2D(note), 1.f, 9600.f);
+        
         //poles_[0]->SetDelay(d);
         poles_[1]->SetDelay(d);
         //poles_[2]->SetDelay(d);
@@ -259,13 +261,13 @@ private:
                 break;
             }
         case FilterMode::CF:
-            float f = Clamp(Map(value, 0.f, 1.f, 100.f, 15000.f), 100.f, 15000.f);
-            float r = Clamp(VariableCrossFade(0.f, 0.8f, resoValue_, 0.9f), 0.f, 0.8f);
-            combs_[LEFT_CHANNEL]->SetFrequency(f);
+            float n = Clamp(Map(value, 0.f, 1.f, 5, 127), 5, 127);
+            float r = Clamp(VariableCrossFade(0.4f, 0.85f, resoValue_, 0.85f), 0.f, 1.f);
+            combs_[LEFT_CHANNEL]->SetNote(n);
             combs_[LEFT_CHANNEL]->SetResonance(r);
-            combs_[RIGHT_CHANNEL]->SetFrequency(f);
+            combs_[RIGHT_CHANNEL]->SetNote(n);
             combs_[RIGHT_CHANNEL]->SetResonance(r);
-            filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterCombGainMax, kFilterCombGainMin);
+            //filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterCombGainMax, kFilterCombGainMin);
             break;
         }
         noise_.SetFreq(cutoff);
@@ -274,9 +276,9 @@ private:
     void SetReso(float value)
     {
         resoValue_ = Clamp(value);
-        reso_ = VariableCrossFade(0.5f, 10.f, value, 0.9f);
-        drive_ = VariableCrossFade(0.f, 0.02f, value, 0.15f, 0.9f);
-        noiseLevel_ = VariableCrossFade(0.f, 0.1f, value, 0.15f, 0.9f);
+        reso_ = VariableCrossFade(0.5f, 10.f, value, 0.85f);
+        drive_ = VariableCrossFade(0.f, 0.02f, value, 0.35f, 0.65f);
+        noiseLevel_ = VariableCrossFade(0.f, 0.1f, value, 0.1f, 0.85f);
     }
 
 public:
@@ -377,8 +379,8 @@ public:
                 ro *= 1.f - ef_[RIGHT_CHANNEL]->process(ro);
             }
 
-            leftOut[i] = lo * kFilterMakeupGain * patchCtrls_->filterVol;
-            rightOut[i] = ro * kFilterMakeupGain * patchCtrls_->filterVol;
+            leftOut[i] = SoftClip(lo * kFilterMakeupGain * patchCtrls_->filterVol);
+            rightOut[i] = SoftClip(ro * kFilterMakeupGain * patchCtrls_->filterVol);
         }
     }
 };
