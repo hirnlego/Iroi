@@ -573,9 +573,8 @@ public:
 
     void HandleLeds() {
         float level = patchState_->outputLevel.getMaxValue();
-        debugMessage("l", level);
-        if (level < 0.5f) {
-            leds_[LED_INPUT]->Set(Map(level, 0.f, 0.5f, 0.45f, 1.f));
+        if (level < 0.6f) {
+            leds_[LED_INPUT]->Set(Map(level, 0.f, 0.6f, 0.45f, 1.f));
             leds_[LED_INPUT_PEAK]->Off();
         }
         else {

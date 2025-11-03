@@ -131,7 +131,7 @@ public:
     void setFrequency(float freq)
     {
         freq *= 0.5f;
-        t_ = 1.f / (sampleRate_ / Clamp(freq, 0.001, 10.f));
+        t_ = 1.f / (sampleRate_ / Clamp(freq, 0.001, 300.f));
     }
 
     void process()
