@@ -402,7 +402,7 @@ public:
 
     virtual ParamCatchUp GetCatchUpState();
     virtual bool Process();
-    virtual void Reset();
+    virtual void Reset(FuncMode funcMode);
 };
 
 class KnobController : public CatchUpController
@@ -495,18 +495,18 @@ public:
         lockableParams_[selectedParam_].Unlock(true);
     }
 
-    inline void Reset()
+    inline void Reset(FuncMode funcMode)
     {
-        switch (selectedParam_)
+        switch (funcMode)
         {
-        case LockableParamName::PARAM_LOCKABLE_MOD:
-            lockableParams_[selectedParam_].Clear();
+        case FUNC_MODE_MOD:
+            lockableParams_[LockableParamName::PARAM_LOCKABLE_MOD].Clear();
             break;
-        case LockableParamName::PARAM_LOCKABLE_CV:
-            lockableParams_[selectedParam_].Reset();
+        case FUNC_MODE_CV:
+            lockableParams_[LockableParamName::PARAM_LOCKABLE_CV].Reset();
             break;
-        case LockableParamName::PARAM_LOCKABLE_RND:
-            lockableParams_[selectedParam_].Clear();
+        case FUNC_MODE_RND:
+            lockableParams_[LockableParamName::PARAM_LOCKABLE_RND].Clear();
             break;
 
         default:
@@ -710,7 +710,7 @@ public:
         lockableParam_.InitValue(value);
     }
 
-    inline void Reset()
+    inline void Reset(FuncMode funcMode)
     {
         lockableParam_.Realign();
     }

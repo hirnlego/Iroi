@@ -54,7 +54,7 @@ private:
 
     bool mapAndRandomPressed_, fadeOutOutput_,
         fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
-        undoRedo_, doRandomSlew_, startup_, mapActive_;
+        undoRedo_, doRandomSlew_, startup_, mapActive_, mapButtonWasOn_;
 
     int randomizeTask_;
 
@@ -86,6 +86,7 @@ public:
         doRandomSlew_ = false;
         startup_ = true;
         mapActive_ = false;
+        mapButtonWasOn_ = false;
 
         selectedMapTarget_ = FuncMode::FUNC_MODE_NONE;
 
@@ -539,11 +540,7 @@ public:
             break;
 
         case SHIFT_BUTTON:
-            // If mapping is active, disable shift.
-            if (!mapActive_) 
-            {
-                shiftButton_->Trig(on);
-            }
+            shiftButton_->Trig(on);
             break;
 
         case IN_DETEC:
@@ -620,8 +617,10 @@ public:
         mapActive_ = mapButton_->IsOn() && !shiftButton_->IsOn();
 
         FuncMode funcMode = patchState_->funcMode;
+
         if (mapButton_->IsPressed() && !shiftButton_->IsOn()) {
-            // Handle long press for saving.
+            // Handle long press for saving when the shift
+            // button is not pressed.
             if (samplesSinceMapButtonPressed_ < kSaveLimit) {
                 samplesSinceMapButtonPressed_++;
                 leds_[LED_MAP]->On();
@@ -634,7 +633,13 @@ public:
                 leds_[LED_MAP]->Off();
             }
         }
-        else if (shiftButton_->IsOn() && !mapButton_->IsOn() && !randomButton_->IsOn()) {
+        else if (shiftButton_->IsOn()) {
+            if (mapButton_->IsOn() && !mapButtonWasOn_ && patchState_->funcMode != FUNC_MODE_ALT)
+            {
+                mapButtonWasOn_ = true;
+                mapButton_->Set(0);
+            }
+
             // Only SHIFT button is on.
             if (saveFlag_) {
                 // Saving button has been released.
@@ -655,6 +660,12 @@ public:
                 funcMode = FuncMode::FUNC_MODE_NONE;
             }
             samplesSinceMapButtonPressed_ = 0;
+
+            if (mapButtonWasOn_)
+            {
+                mapButtonWasOn_ = false;
+                mapButton_->Set(1);
+            }
         }
 
         if (mapActive_) {
@@ -670,7 +681,7 @@ public:
             randomButton_->SetFuncMode(patchState_->funcMode);
         }
 
-        if (patchState_->funcMode != FUNC_MODE_ALT) 
+        if (patchState_->funcMode != FuncMode::FUNC_MODE_ALT) 
         {
             // Handle long press of the random button for slewing.
             if (randomButton_->IsPressed()) {
@@ -687,21 +698,18 @@ public:
                 randomize_ = true;
             }
         }
-
-        if (patchState_->funcMode != FUNC_MODE_NONE)
+        else
         {
-            if (mapButton_->IsPressed() || randomButton_->IsPressed()) {
+            if (mapButton_->IsPressed() || randomButton_->IsPressed()) 
+            {
                 if (samplesSinceMapOrRandomPressed_ < kResetLimit) {
                     samplesSinceMapOrRandomPressed_++;
                 }
                 else if (mapAndRandomTrigger_.Process(mapButton_->IsPressed() && randomButton_->IsPressed())) {
                     mapAndRandomPressed_ = true;
                     // Reset parameters.
-                    for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
-                        CatchUpController* ctrl = (i < PARAM_KNOB_LAST)
-                            ? (CatchUpController*)knobs_[i]
-                            : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
-                        ctrl->Reset();
+                    for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
+                        knobs_[i]->Reset(FUNC_MODE_NONE);
                     }
                 }
                 // mapAndRandomPressed_ assures that if the last operation
@@ -711,6 +719,12 @@ public:
                     if (FuncMode::FUNC_MODE_ALT == patchState_->funcMode) {
                         if (!undoRedo_ && randomButton_->IsOn()) {
                             undoRedo_ = true;
+                        }
+                        else if (mapButton_->IsOn()) {
+                            // Reset selected mappings.
+                            for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
+                                knobs_[i]->Reset(selectedMapTarget_);
+                            }
                         }
                     }
                 }
