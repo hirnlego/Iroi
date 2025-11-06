@@ -56,9 +56,7 @@ private:
         fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
         undoRedo_, doRandomSlew_, startup_, mapActive_, mapButtonWasOn_;
 
-    int randomizeTask_;
-
-    float randomize_, randomSlewInc_;
+    float randomize_, randomSlewInc_, cutoff_, cutoffCv_, cutoffPot_;
 
     FuncMode selectedMapTarget_;
 
@@ -90,8 +88,9 @@ public:
 
         selectedMapTarget_ = FuncMode::FUNC_MODE_NONE;
 
-        randomizeTask_ = 0;
-
+        cutoff_ = 0;
+        cutoffCv_ = 0; 
+        cutoffPot_ = 0;
         randomSlewInc_ = 0;
 
         hwRevision_ = 0;
@@ -155,7 +154,7 @@ public:
             FaderController::create(patchState_, &patchCtrls_->ambienceVol);
 
         knobs_[PARAM_KNOB_FILTER_CUTOFF] = KnobController::create(patchState_,
-            &patchCtrls_->filterCutoff, &patchCtrls_->filterMode,
+            &cutoff_, &patchCtrls_->filterMode,
             &patchCtrls_->filterCutoffModAmount, &patchCtrls_->filterCutoffCvAmount, &patchCtrls_->filterCutoffRndAmount);
         knobs_[PARAM_KNOB_FILTER_RESONANCE] = KnobController::create(patchState_,
             &patchCtrls_->filterResonance, &patchCtrls_->filterPosition,
@@ -822,6 +821,20 @@ public:
         }
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
+
+        float cutoffNote = Max(1, 127 * patchCvs_->filterCutoff);
+        float interval = cutoffNote - cutoffCv_;
+        if (interval < -0.4f || interval > 0.4f) {
+            cutoffCv_ = cutoffNote;
+        }
+        else {
+            cutoffCv_ += 0.1f * interval;
+        }
+
+        cutoffNote = Modulate(cutoff_, patchCtrls_->filterCutoffModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
+        cutoffNote = 127 * cutoffNote;
+        cutoffPot_ += 0.1f * (cutoffNote - cutoffPot_);
+        patchCtrls_->filterCutoff = cutoffPot_ + cutoffCv_;
 
         if (patchCtrls_->filterVol >= kOne) {
             patchCtrls_->filterVol = 1.f;

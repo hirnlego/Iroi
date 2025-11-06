@@ -227,11 +227,11 @@ private:
         mode_ = mode;
     }
 
-    void SetFreq(float value)
+    void SetFreq(float note)
     {
         filterGain_ = kFilterLpGainMin;
 
-        float cutoff = Clamp(MapLog(value, 0.f, 1.f, 10.f, 22000.f), 10.f, 22000.f);
+        float cutoff = Clamp(M2F(note), 10.f, 20000.f);
 
         switch (mode_)
         {
@@ -261,11 +261,10 @@ private:
                 break;
             }
         case FilterMode::CF:
-            float n = Clamp(Map(value, 0.f, 1.f, 5, 127), 5, 127);
             float r = Clamp(VariableCrossFade(0.4f, 0.85f, resoValue_, 0.85f), 0.f, 1.f);
-            combs_[LEFT_CHANNEL]->SetNote(n);
+            combs_[LEFT_CHANNEL]->SetNote(note);
             combs_[LEFT_CHANNEL]->SetResonance(r);
-            combs_[RIGHT_CHANNEL]->SetNote(n);
+            combs_[RIGHT_CHANNEL]->SetNote(note);
             combs_[RIGHT_CHANNEL]->SetResonance(r);
             //filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterCombGainMax, kFilterCombGainMin);
             break;
@@ -276,9 +275,9 @@ private:
     void SetReso(float value)
     {
         resoValue_ = Clamp(value);
-        reso_ = VariableCrossFade(0.5f, 10.f, value, 0.85f);
+        reso_ = MapExpo(value, 0.f, 0.85f, 0.1f, 30.f);
         drive_ = VariableCrossFade(0.f, 0.02f, value, 0.35f, 0.65f);
-        noiseLevel_ = VariableCrossFade(0.f, 0.1f, value, 0.1f, 0.85f);
+        noiseLevel_ = VariableCrossFade(0.f, 1.f, value, 0.1f, 0.85f);
     }
 
 public:
@@ -347,7 +346,8 @@ public:
         float r = Modulate(patchCtrls_->filterResonance, patchCtrls_->filterResonanceModAmount, patchState_->modValue, patchCtrls_->filterResonanceCvAmount, patchCvs_->filterResonance, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetReso(r);
 
-        float c = Modulate(patchCtrls_->filterCutoff, patchCtrls_->filterCutoffModAmount, patchState_->modValue, patchCtrls_->filterCutoffCvAmount, patchCvs_->filterCutoff, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        //float c = Modulate(patchCtrls_->filterCutoff, patchCtrls_->filterCutoffModAmount, patchState_->modValue, patchCtrls_->filterCutoffCvAmount, patchCvs_->filterCutoff, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        float c = patchCtrls_->filterCutoff;
         SetFreq(c);
 
         for (size_t i = 0; i < size; i++)

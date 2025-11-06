@@ -58,11 +58,11 @@ public:
     {
         id_ = id;
         type_ = type;
-        value_ = 0;
         trig_ = false;
         doBlink_ = false;
         trigger_.Init(48000);
         samplesBetweenBlinks_ = 0;
+        Off();
     }
 
     ~Led() {}
