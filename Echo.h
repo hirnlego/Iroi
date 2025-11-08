@@ -117,7 +117,7 @@ private:
 
             echoDensity_ = value;
 
-            float d = MapExpo(echoDensity_, 0.f, 1.f, kEchoMinLengthSamples, patchState_->clockSamples * kEchoInternalClockMultiplier);
+            float d = Clamp(MapExpo(echoDensity_, 0.f, 0.97f, kEchoMinLengthSamples, kEchoMaxLengthSamples), kEchoMinLengthSamples, kEchoMaxLengthSamples);
             size_t s = kEchoFadeSamples;
             ParameterInterpolator densityParam(&oldDensity_, d, s);
             float de = densityParam.Next();
@@ -263,8 +263,8 @@ public:
             left = comp_[LEFT_CHANNEL]->process(left) * kEchoMakeupGain;
             right = comp_[RIGHT_CHANNEL]->process(right) * kEchoMakeupGain;
 
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->echoVol, 1.8f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->echoVol, 1.8f);
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->echoVol);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->echoVol);
         }
 
         if (externalClock_)

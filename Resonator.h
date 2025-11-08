@@ -253,7 +253,7 @@ private:
         float feedback = Map(value, 0.f, 1.f, 0.85f, 1.f);
         float reso = Map(value, 0.f, 1.f, 0.5f, 0.6f);
         float filter = Map(value, 0.f, 1.f, 5000.f, 10000.f);
-        amp_ = Map(value, 0.f, 1.f, kResoGainMax, kResoGainMin) * 0.577f;
+        //amp_ = Map(value, 0.f, 1.f, kResoGainMax, kResoGainMin) * 0.577f;
         for (int i = 0; i < 3; i++)
         {
             poles_[i]->SetFeedback(feedback);
@@ -386,8 +386,8 @@ public:
             oLeft = hs_[LEFT_CHANNEL]->process(oLeft);
             oRight = hs_[RIGHT_CHANNEL]->process(oRight);
 
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, oLeft * kResoMakeupGain, patchCtrls_->resonatorVol, 1.4f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, oRight * kResoMakeupGain, patchCtrls_->resonatorVol, 1.4f);
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, oLeft * kResoMakeupGain, patchCtrls_->resonatorVol);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, oRight * kResoMakeupGain, patchCtrls_->resonatorVol);
         }
 
         compressor_->process(output, output);

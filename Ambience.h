@@ -310,6 +310,7 @@ private:
     EnvFollower* ef_[2];
     Compressor* comp_[2];
     DcBlockingFilter* dc_[2];
+    BiquadFilter *hs_[2];
 
     float amp_, pan_, decay_, spaceTime_;
     float reverse_;
@@ -371,11 +372,21 @@ private:
 
     void SetSpacetime(float value)
     {
-        spaceTime_ = CenterMap(value);
+        spaceTime_ = value * 2.f - 1.f;
+        if (spaceTime_ < -1.f) 
+        {
+            spaceTime_ = -1.f;
+        }
+        else if (spaceTime_ >= 0.95f) 
+        {
+            spaceTime_ = 1.f;
+        }
 
         float lowDamp = kAmbienceLowDampMin;
         float highDamp = kAmbienceHighDampMin;
         float size;
+
+        float a = abs(spaceTime_);
 
         if (spaceTime_ < 0.f) {
             if (spaceTime_ < -0.4f)
@@ -387,7 +398,7 @@ private:
                 lowDamp = Map(spaceTime_, -0.4f, 0.f, kAmbienceLowDampMin, kAmbienceLowDampMax);
             }
             size = 60.1f - MapExpo(spaceTime_, -1.f, 0.f, 0.1f, 60.f);
-            amp_ = kAmbienceRevGainMax + kAmbienceRevGainMin - MapExpo(spaceTime_, -1.f, 0.f, kAmbienceRevGainMin, kAmbienceRevGainMax);
+            amp_ = a <= 0.5f ? MapLog(a, 0.f, 0.5f, 3.f, 0.6f) : MapExpo(a, 0.51f, 1.f, 0.6f, Map(decay_, 0.f, 1.f, 1.4f, 1.2f));
         } else {
             if (spaceTime_ < 0.4f)
             {
@@ -397,11 +408,9 @@ private:
             {
                 highDamp = Map(spaceTime_, 0.4f, 1.f, kAmbienceHighDampMin, kAmbienceHighDampMax);
             }
-            size = MapExpo(spaceTime_, 0.f, 1.f, 0.1f, 60.f);
-            amp_ = MapExpo(spaceTime_, 0.f, 1.f, kAmbienceGainMin, kAmbienceGainMax);
+            size = MapExpo(spaceTime_, 0.f, 0.97f, 0.1f, 60.f);
+            amp_ = a <= 0.3f ? MapLog(a, 0.f, 0.3f, 3.f, 0.6f) : MapExpo(a, 0.31f, 1.f, 0.6f, 1.f);
         }
-
-        amp_ = 1.f;
 
         SetLowDamp(lowDamp);
         SetHighDamp(highDamp);
@@ -435,9 +444,13 @@ public:
             reversers_[i] = ReversedBuffer::create(kAmbienceBufferSize);
             ef_[i] = EnvFollower::create();
             dc_[i] = DcBlockingFilter::create();
+            hs_[i] = BiquadFilter::create(patchState_->sampleRate);
+            hs_[i]->setLowShelf(20.f, -12.f);
             comp_[i] = Compressor::create(patchState_->sampleRate);
+            comp_[i]->setAttack(100);
+            comp_[i]->setAttack(100);
             comp_[i]->setThreshold(-30);
-            comp_[i]->setRatio(2);
+            comp_[i]->setRatio(4);
         }
 
         dampFilters_[LEFT_CHANNEL]->SetHp(112);
@@ -446,7 +459,7 @@ public:
         dampFilters_[RIGHT_CHANNEL]->SetHp(96);
         dampFilters_[RIGHT_CHANNEL]->SetLp(51);
 
-        panner_ = SineOscillator::create(patchState_->blockRate);
+        panner_ = SineOscillator::create(patchState_->sampleRate);
 
         amp_ = 1.f;
         pan_ = 0.5f;
@@ -462,6 +475,7 @@ public:
             Diffuse::destroy(diffusers_[i]);
             ReversedBuffer::destroy(reversers_[i]);
             EnvFollower::destroy(ef_[i]);
+            BiquadFilter::destroy(hs_[i]);
             DcBlockingFilter::destroy(dc_[i]);
             Compressor::destroy(comp_[i]);
         }
@@ -528,19 +542,17 @@ public:
 
             x += xi_;
 
-            /*
-            comp_[LEFT_CHANNEL]->setThreshold(-40 * patchCtrls_->echoRepeats);
-            comp_[LEFT_CHANNEL]->setRatio(10 * patchCtrls_->echoDensity);
-            comp_[RIGHT_CHANNEL]->setThreshold(-40 * patchCtrls_->echoRepeats);
-            comp_[RIGHT_CHANNEL]->setRatio(10 * patchCtrls_->echoDensity);
-            
-            debugMessage("c",comp_[LEFT_CHANNEL]->getThreshold(),comp_[LEFT_CHANNEL]->getRatio() );
-            */
-            left = comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain;
-            right = comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain;
+            left = hs_[LEFT_CHANNEL]->process(left);
+            right = hs_[RIGHT_CHANNEL]->process(right);
 
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.8f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.8f);
+            left *= amp_;
+            right *= amp_;
+
+            left = SoftClip(comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain);
+            right = SoftClip(comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain);
+
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.6f);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.6f);
         }
 
         diffusers_[LEFT_CHANNEL]->UpdateDelayTimes();

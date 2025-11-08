@@ -240,7 +240,7 @@ private:
                 filters_[LEFT_CHANNEL]->setLowPass(cutoff, reso_);
                 filters_[RIGHT_CHANNEL]->setLowPass(cutoff, reso_);
                 // Shut the filter off when the frequency is really low.
-                float g = MapExpo(resoValue_, 0.f, 1.f, kFilterLpGainMax, kFilterLpGainMin);
+                float g = MapExpo(resoValue_, 0.f, 0.97f, kFilterLpGainMax, kFilterLpGainMin);
                 filterGain_ = cutoff <= 15.f ? Map(cutoff, 10.f, 15.f, 0.f, g) : g;
                 break;
             }
@@ -248,7 +248,7 @@ private:
             {
                 filters_[LEFT_CHANNEL]->setBandPass(cutoff, reso_);
                 filters_[RIGHT_CHANNEL]->setBandPass(cutoff, reso_);
-                filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterBpGainMin, kFilterBpGainMax);
+                filterGain_ = MapExpo(resoValue_, 0.f, 0.97f, kFilterBpGainMin, kFilterBpGainMax);
             }
             break;
         case FilterMode::HP:
@@ -256,7 +256,7 @@ private:
                 filters_[LEFT_CHANNEL]->setHighPass(cutoff, reso_);
                 filters_[RIGHT_CHANNEL]->setHighPass(cutoff, reso_);
                 // Shut the filter off when the frequency is really high.
-                float g = MapExpo(resoValue_, 0.f, 1.f, kFilterHpGainMax, kFilterHpGainMin);
+                float g = MapExpo(resoValue_, 0.f, 0.97f, kFilterHpGainMax, kFilterHpGainMin);
                 filterGain_ = cutoff >= 20000.f ? Map(cutoff, 15000, 20000, g, 0.f) : g;
                 break;
             }

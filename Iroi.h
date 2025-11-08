@@ -29,6 +29,7 @@ private:
     StereoDcBlockingFilter* inputDcFilter_;
     StereoDcBlockingFilter* outputDcFilter_;
 
+    EnvFollower* inEnvFollower_[2];
     EnvFollower* outEnvFollower_[2];
 
     FilterPosition filterPosition_, lastFilterPosition_;
@@ -51,6 +52,8 @@ public:
 
         for (size_t i = 0; i < 2; i++)
         {
+            inEnvFollower_[i] = EnvFollower::create();
+            inEnvFollower_[i]->setLambda(0.9f);
             outEnvFollower_[i] = EnvFollower::create();
             outEnvFollower_[i]->setLambda(0.9f);
         }
@@ -71,6 +74,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             EnvFollower::destroy(outEnvFollower_[i]);
+            EnvFollower::destroy(inEnvFollower_[i]);
         }
     }
 
@@ -94,9 +98,14 @@ public:
         FloatArray left = buffer.getSamples(LEFT_CHANNEL);
         FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
 
-        inputDcFilter_->process(buffer, buffer);
-
         const int size = buffer.getSize();
+
+        for (size_t i = 0; i < size; i++)
+        {
+            patchState_->inputLevel[i] = Mix2(inEnvFollower_[0]->process(left[i]), inEnvFollower_[1]->process(right[i]));
+        }
+
+        inputDcFilter_->process(buffer, buffer);
 
         modulation_->Process();
 

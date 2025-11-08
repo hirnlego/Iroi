@@ -36,6 +36,7 @@ private:
     int samplesBetweenBlinks_;
 
     float value_;
+    float prevValue_;
 
     bool trig_;
     bool doBlink_;
@@ -62,6 +63,7 @@ public:
         doBlink_ = false;
         trigger_.Init(48000);
         samplesBetweenBlinks_ = 0;
+        prevValue_ = 0;
         Off();
     }
 
@@ -118,7 +120,7 @@ public:
      */
     inline void Blink(int blinks = 1, bool fast = false, bool initial = true)
     {
-        if (blinks == -1 && blinks_ == -1)
+        if ((blinks == -1 && blinks_ == -1) || blinks_ > 0)
         {
             return;
         }
@@ -128,12 +130,14 @@ public:
         if (blinks == 0)
         {
             // Stop blinking.
-            Off();
+            Set(prevValue_);
             doBlink_ = false;
             trig_ = false;
 
             return;
         }
+
+        prevValue_ = value_;
 
         Set(initial);
         trig_ = true;
@@ -161,7 +165,7 @@ public:
                     blinks_--;
                     if (blinks_ == 0)
                     {
-                        Off();
+                        Set(prevValue_);
                     }
                 }
                 samplesBetweenBlinks_ = 0;

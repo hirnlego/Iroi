@@ -695,7 +695,7 @@ public:
         float* param,
         float lpCoeff = 0.f,
         float movementDelta = 0.f,
-        float scale = 3.f
+        float scale = 1.f
     ) {
         return new FaderController(patchState, param, lpCoeff, movementDelta, scale);
     }

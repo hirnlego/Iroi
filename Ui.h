@@ -589,6 +589,13 @@ public:
         if (patchState_->clockTick) {
             leds_[LED_SYNC]->Blink();
         }
+
+        if (modTypeLockTrigger_.Process(patchState_->modTypeLockFlag) ||
+            modSpeedLockTrigger_.Process(patchState_->modSpeedLockFlag) ||
+            filterModeTrigger_.Process(patchState_->filterModeFlag) ||
+            filterPositionTrigger_.Process(patchState_->filterPositionFlag)) {
+            leds_[LED_SHIFT]->Blink(2, true);
+        }
     }
 
     void HandleCatchUp() {
@@ -822,7 +829,7 @@ public:
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
-        float cutoffNote = Max(1, 127 * patchCvs_->filterCutoff);
+        float cutoffNote = 127 * patchCvs_->filterCutoff;
         float interval = cutoffNote - cutoffCv_;
         if (interval < -0.4f || interval > 0.4f) {
             cutoffCv_ = cutoffNote;
@@ -832,9 +839,9 @@ public:
         }
 
         cutoffNote = Modulate(cutoff_, patchCtrls_->filterCutoffModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
-        cutoffNote = 127 * cutoffNote;
+        cutoffNote = 12 + 115 * cutoffNote;
         cutoffPot_ += 0.1f * (cutoffNote - cutoffPot_);
-        patchCtrls_->filterCutoff = cutoffPot_ + cutoffCv_;
+        patchCtrls_->filterCutoff = Clamp(cutoffPot_ + cutoffCv_, 0.f, 127.f);
 
         if (patchCtrls_->filterVol >= kOne) {
             patchCtrls_->filterVol = 1.f;

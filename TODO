@@ -1,6 +1,3 @@
 - fix random input
 - fix comb filter in lower frequency settings
-- voct for filter CV
-- check echo density, is it working?
-- blinking shift LED when reaching certain virtual detents
 - remove temporal mapping
