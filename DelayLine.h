@@ -59,10 +59,9 @@ public:
         size_t idx = (size_t)index;
         float y0 = readAt(idx);
         float y1 = readAt(idx + 1);
-        float y2 = readAt(idx + 2);
         float frac = index - idx;
 
-        return Interpolator::cubic(y0, y1, y2, frac);
+        return Interpolator::linear(y0, y1, frac);
     }
 
     inline float read(float index1, float index2, float x)

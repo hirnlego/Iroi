@@ -67,7 +67,7 @@ constexpr float kSemi4Oct = 12;
 // When internally clocked, base frequency is ~0.18Hz
 // When externally clocked, min bpm is 30 (0.5Hz), max is 300 (5Hz)
 constexpr float kClockFreqMin = 0.01f;
-constexpr float kClockFreqMax = 64.f;
+constexpr float kClockFreqMax = 80.f;
 constexpr int kExternalClockLimit = 3000; // Samples required to detect a steady external clock - 2s (1500 = 1s @ block rate)
 constexpr float kInternalClockSamples = 48000.f; // 1 second
 static const float kInternalClockFreq = 48000.f / kInternalClockSamples;
@@ -117,15 +117,15 @@ constexpr float kEchoCompThresMin = -16.f;
 constexpr float kEchoCompThresMax = -24.f;
 constexpr float kEchoMakeupGain = 2.8f;
 
-constexpr int32_t kAmbienceBufferSize = 72000;
-constexpr int kAmbienceNofDiffusers = 4;
+constexpr int32_t kAmbienceBufferSize = 48000;
+constexpr int kAmbienceNofDiffusers = 8;
 constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
 constexpr float kAmbienceHighDampMin = -0.5f;
 constexpr float kAmbienceHighDampMax = -40.f;
-constexpr float kAmbienceMakeupGain = 5.f;
-constexpr float kAmbienceInfiniteFeedbackThreshold = 0.99f;
-constexpr float kAmbienceInfiniteFeedbackLevel = 1.2f;
+constexpr float kAmbienceMakeupGain = 1.2f;
+constexpr float kAmbienceInfiniteFeedbackThreshold = 0.97f;
+constexpr float kAmbienceInfiniteFeedbackLevel = 1.1f;
 
 static const float kOutputFadeInc = 1.f / 16.f;
 constexpr float kOutputMakeupGain = 1.f;

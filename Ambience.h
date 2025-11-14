@@ -182,11 +182,9 @@ public:
 
         for (int i = 0; i < kAmbienceNofDiffusers - 1; i++)
         {
-            //float prev = HardClip(out - outs_[i] * df_);
-            float prev = out - outs_[i] * df_;
+            float prev = HardClip(out - outs_[i] * df_);
             diffuse_[i]->write(prev);
-            //out = HardClip(prev * df_ + outs_[i]);
-            out = prev * df_ + outs_[i];
+            out = HardClip(prev * df_ + outs_[i]);
             outs_[i] = diffuse_[i]->read(delayTimes_[i], newDelayTimes_[i], x);
         }
 
@@ -310,13 +308,10 @@ private:
     EnvFollower* ef_[2];
     Compressor* comp_[2];
     DcBlockingFilter* dc_[2];
-    BiquadFilter *hs_[2];
 
     float amp_, pan_, decay_, spaceTime_;
     float reverse_;
     float xi_;
-
-    bool infinite_;
 
     Lut<float, 32> decayLUT{0.f, -160.f, Lut<float, 32>::Type::LUT_TYPE_EXPO};
 
@@ -365,22 +360,13 @@ private:
 
     void SetDecay(float value)
     {
-        infinite_ = value > kAmbienceInfiniteFeedbackThreshold;
-        decay_ = VariableCrossFade(0.f, 1.f, value, kAmbienceInfiniteFeedbackThreshold - 0.01f);
+        decay_ = value;
         SetDecayTime(decayLUT.Quantized(decay_));
     }
 
     void SetSpacetime(float value)
     {
-        spaceTime_ = value * 2.f - 1.f;
-        if (spaceTime_ < -1.f) 
-        {
-            spaceTime_ = -1.f;
-        }
-        else if (spaceTime_ >= 0.95f) 
-        {
-            spaceTime_ = 1.f;
-        }
+        spaceTime_ = CenterMap(value, -1.f, 1.f, 0.48f);
 
         float lowDamp = kAmbienceLowDampMin;
         float highDamp = kAmbienceHighDampMin;
@@ -408,7 +394,7 @@ private:
             {
                 highDamp = Map(spaceTime_, 0.4f, 1.f, kAmbienceHighDampMin, kAmbienceHighDampMax);
             }
-            size = MapExpo(spaceTime_, 0.f, 0.97f, 0.1f, 60.f);
+            size = MapExpo(spaceTime_, 0.f, 1.f, 0.1f, 60.f);
             amp_ = a <= 0.3f ? MapLog(a, 0.f, 0.3f, 3.f, 0.6f) : MapExpo(a, 0.31f, 1.f, 0.6f, 1.f);
         }
 
@@ -444,8 +430,6 @@ public:
             reversers_[i] = ReversedBuffer::create(kAmbienceBufferSize);
             ef_[i] = EnvFollower::create();
             dc_[i] = DcBlockingFilter::create();
-            hs_[i] = BiquadFilter::create(patchState_->sampleRate);
-            hs_[i]->setLowShelf(20.f, -12.f);
             comp_[i] = Compressor::create(patchState_->sampleRate);
             comp_[i]->setAttack(100);
             comp_[i]->setAttack(100);
@@ -459,13 +443,11 @@ public:
         dampFilters_[RIGHT_CHANNEL]->SetHp(96);
         dampFilters_[RIGHT_CHANNEL]->SetLp(51);
 
-        panner_ = SineOscillator::create(patchState_->sampleRate);
+        panner_ = SineOscillator::create(patchState_->blockRate);
 
         amp_ = 1.f;
         pan_ = 0.5f;
         xi_ = 1.f / patchState_->blockSize;
-
-        infinite_ = false;
     }
     ~Ambience()
     {
@@ -475,7 +457,6 @@ public:
             Diffuse::destroy(diffusers_[i]);
             ReversedBuffer::destroy(reversers_[i]);
             EnvFollower::destroy(ef_[i]);
-            BiquadFilter::destroy(hs_[i]);
             DcBlockingFilter::destroy(dc_[i]);
             Compressor::destroy(comp_[i]);
         }
@@ -525,34 +506,27 @@ public:
             float leftFb = dampFilters_[LEFT_CHANNEL]->Process(left + diffusers_[RIGHT_CHANNEL]->GetFbOut());
             float rightFb = dampFilters_[RIGHT_CHANNEL]->Process(right + diffusers_[LEFT_CHANNEL]->GetFbOut());
 
-            leftFb = SoftClip(left * (1.f - pan_) + leftFb);
-            rightFb = SoftClip(right * pan_ + rightFb);
+            leftFb = HardClip(left * (1.f - pan_) + leftFb);
+            rightFb = HardClip(right * pan_ + rightFb);
 
-            if (infinite_) 
-            {
-                leftFb *= decay_ * kAmbienceInfiniteFeedbackLevel - ef_[LEFT_CHANNEL]->process(leftFb);
-                rightFb *= decay_ * kAmbienceInfiniteFeedbackLevel - ef_[RIGHT_CHANNEL]->process(rightFb);
-            }
+            leftFb *= 1.f - ef_[LEFT_CHANNEL]->process(leftFb);
+            rightFb *= 1.f - ef_[RIGHT_CHANNEL]->process(rightFb);
 
             leftFb = dc_[LEFT_CHANNEL]->process(leftFb);
             rightFb = dc_[RIGHT_CHANNEL]->process(rightFb);
 
-            left = diffusers_[LEFT_CHANNEL]->Process(leftFb, x) * 0.5f;
-            right = diffusers_[RIGHT_CHANNEL]->Process(rightFb, x) * 0.5f;
+            left = diffusers_[LEFT_CHANNEL]->Process(leftFb, x);
+            right = diffusers_[RIGHT_CHANNEL]->Process(rightFb, x);
 
             x += xi_;
 
-            left = hs_[LEFT_CHANNEL]->process(left);
-            right = hs_[RIGHT_CHANNEL]->process(right);
+            float a = Map(decay_, 0.f, 1.f, amp_ * 1.3f, amp_);
 
-            left *= amp_;
-            right *= amp_;
+            left = comp_[LEFT_CHANNEL]->process(left * a) * kAmbienceMakeupGain;
+            right = comp_[RIGHT_CHANNEL]->process(right * a) * kAmbienceMakeupGain;
 
-            left = SoftClip(comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain);
-            right = SoftClip(comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain);
-
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.6f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.6f);
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.4f);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.4f);
         }
 
         diffusers_[LEFT_CHANNEL]->UpdateDelayTimes();
