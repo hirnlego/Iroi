@@ -832,7 +832,7 @@ public:
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
-        float cutoffNote = 127 * patchCvs_->filterCutoff;
+        float cutoffNote = 127 * patchCvs_->filterCutoff * patchCtrls_->filterCutoffCvAmount;
         float interval = cutoffNote - cutoffCv_;
         if (interval < -0.4f || interval > 0.4f) {
             cutoffCv_ = cutoffNote;
