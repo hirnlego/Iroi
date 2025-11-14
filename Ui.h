@@ -620,7 +620,7 @@ public:
         randomButton_->Process();
         shiftButton_->Process();
 
-        mapActive_ = mapButton_->IsOn() && !shiftButton_->IsOn();
+        mapActive_ = mapButton_->IsOn() && !mapButton_->IsPressed() && !shiftButton_->IsOn();
 
         FuncMode funcMode = patchState_->funcMode;
 
@@ -642,6 +642,7 @@ public:
         else if (shiftButton_->IsOn()) {
             if (mapButton_->IsOn() && !mapButtonWasOn_ && patchState_->funcMode != FUNC_MODE_ALT)
             {
+                // Temporarily exit mapping.
                 mapButtonWasOn_ = true;
                 mapButton_->Set(0);
             }
@@ -669,6 +670,8 @@ public:
 
             if (mapButtonWasOn_)
             {
+                // If mapping was temporarily disabled when SHIFT
+                // button was pressed, re-enable it.
                 mapButtonWasOn_ = false;
                 mapButton_->Set(1);
             }

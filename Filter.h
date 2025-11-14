@@ -5,6 +5,7 @@
 #include "ChaosNoise.h"
 #include "DcBlockingFilter.h"
 #include "EnvFollower.h"
+#include "ParameterInterpolator.h"
 
 enum FilterMode
 {
@@ -80,10 +81,9 @@ public:
         size_t idx = (size_t)d_;
         float y0 = readAt(idx);
         float y1 = readAt(idx + 1);
-        float y2 = readAt(idx + 2);
         float frac = d_ - idx;
 
-        float out = Interpolator::cubic(y0, y1, y2, frac) + (-c_ * in);
+        float out = Interpolator::linear(y0, y1, frac) + (-c_ * in);
 
         line_.setElement(w_, in + (c_ * out));
 
@@ -101,6 +101,7 @@ public:
         out += in - c_ * out;
 
         line_.setElement(w_, out);
+        
         w_ = (w_ + 1) % s_;
 
         return out;
@@ -119,9 +120,9 @@ public:
     {
         sampleRate_ = sampleRate;
         poles_[0] = Allpass::create(sampleRate, 2); // Fixed
-        poles_[1] = Allpass::create(sampleRate, 9600); // Variable
+        poles_[1] = Allpass::create(sampleRate, 1468); // Variable
         poles_[2] = Allpass::create(sampleRate, 2); // Fixed
-        poles_[3] = Allpass::create(sampleRate, 9600); // Variable
+        poles_[3] = Allpass::create(sampleRate, 1468); // Variable
         ef_ = EnvFollower::create();
         reso_ = 0;
         out_ = 0;
@@ -147,8 +148,10 @@ public:
 
     void SetNote(float note)
     {
-        float d = Clamp(M2D(note), 1.f, 9600.f);
-        
+        // Scale up notes starting from C2.
+        note = Map(note, 14, 127, 36, 127);
+        float d = Clamp(M2D(note), 4.f, 734.f);
+
         //poles_[0]->SetDelay(d);
         poles_[1]->SetDelay(d);
         //poles_[2]->SetDelay(d);
@@ -190,7 +193,7 @@ private:
     EnvFollower* ef_[2];
 
     float drive_;
-    float freq_;
+    float cutoff_;
     float reso_, resoValue_;
     float amp_;
     float filterGain_;
@@ -227,7 +230,7 @@ private:
         mode_ = mode;
     }
 
-    void SetFreq(float note)
+    void SetNote(float note)
     {
         filterGain_ = kFilterLpGainMin;
 
@@ -299,8 +302,9 @@ public:
         }
 
         mode_ = lastMode_ = FilterMode::LP;
-        freq_ = 22000.f;
+        cutoff_ = 60.f;
         amp_ = Db2A(120);
+        filterGain_ = 0.f;
     }
     ~Filter()
     {
@@ -346,12 +350,12 @@ public:
         float r = Modulate(patchCtrls_->filterResonance, patchCtrls_->filterResonanceModAmount, patchState_->modValue, patchCtrls_->filterResonanceCvAmount, patchCvs_->filterResonance, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetReso(r);
 
-        //float c = Modulate(patchCtrls_->filterCutoff, patchCtrls_->filterCutoffModAmount, patchState_->modValue, patchCtrls_->filterCutoffCvAmount, patchCvs_->filterCutoff, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        float c = patchCtrls_->filterCutoff;
-        SetFreq(c);
+        ParameterInterpolator cutoffParam = ParameterInterpolator(&cutoff_, patchCtrls_->filterCutoff, size);
 
         for (size_t i = 0; i < size; i++)
         {
+            SetNote(cutoffParam.Next());
+
             float n = noise_.Process() * noiseLevel_;
 
             float lIn = Clamp(leftIn[i], -3.f, 3.f);
@@ -363,7 +367,7 @@ public:
             float lf = LinearCrossFade(lIn + n, ls, drive_);
             float rf = LinearCrossFade(rIn + n, rs, drive_);
 
-            float lo, ro;
+            float lo = lf, ro = rf;
             if (FilterMode::CF == mode_)
             {
                 lo = HardClip(combs_[LEFT_CHANNEL]->Process(lf) * filterGain_);
