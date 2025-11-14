@@ -49,12 +49,12 @@ public:
         source_ = ModulationSource::MOD_SOURCE_LFO;
 
         lfo_ = MorphingOscillator::create(NOF_SHAPES, patchState_->blockSize);
-        lfo_->setOscillator(LORENZ, LorenzAttractor::create(patchState_->sampleRate));
-        lfo_->setOscillator(SINE, PhaseShiftOscillator<SineOscillator>::create(0, patchState_->sampleRate));
-        lfo_->setOscillator(INVERTED_RAMP, PhaseShiftOscillator<InvertedRampOscillator>::create(0, patchState_->sampleRate));
-        lfo_->setOscillator(RAMP, PhaseShiftOscillator<RampOscillator>::create(0, patchState_->sampleRate));
-        lfo_->setOscillator(SQUARE, PhaseShiftOscillator<SquareWaveOscillator>::create(0, patchState_->sampleRate));
-        lfo_->setOscillator(SH, NoiseOscillator::create(patchState_->sampleRate));
+        lfo_->setOscillator(LORENZ, LorenzAttractor::create(patchState_->blockRate));
+        lfo_->setOscillator(SINE, PhaseShiftOscillator<SineOscillator>::create(0, patchState_->blockRate));
+        lfo_->setOscillator(INVERTED_RAMP, PhaseShiftOscillator<InvertedRampOscillator>::create(0, patchState_->blockRate));
+        lfo_->setOscillator(RAMP, PhaseShiftOscillator<RampOscillator>::create(0, patchState_->blockRate));
+        lfo_->setOscillator(SQUARE, PhaseShiftOscillator<SquareWaveOscillator>::create(0, patchState_->blockRate));
+        lfo_->setOscillator(SH, NoiseOscillator::create(patchState_->blockRate));
         lfo_->setOscillator(EF, EnvelopeFollowerMod::create(patchCtrls_, patchState_));
         lfo_->setFrequency(kInternalClockFreq);
         lfo_->morph(0.f);

@@ -48,8 +48,8 @@ public:
 
     void processAudio(AudioBuffer& buffer) override
     {
-        clock_->Process();
         ui_->Poll();
+        clock_->Process();
         //inDetec_->Process(buffer);
         iroi_->Process(buffer);
     }
