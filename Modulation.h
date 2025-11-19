@@ -131,7 +131,7 @@ public:
         else if (patchCtrls_->modType >= 0.95f)
         {
             // Envelope.
-            patchCtrls_->modType = 1.f;
+            patchCtrls_->modType = 0.999f;
             patchState_->modTypeLockFlag = true;
             typeReset_ = true;
         }

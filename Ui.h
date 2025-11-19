@@ -96,6 +96,7 @@ public:
         hwRevision_ = 0;
 
         patchState_->funcMode = FuncMode::FUNC_MODE_NONE;
+        patchState_->inputLevel = FloatArray::create(patchState_->blockSize);
         patchState_->outputLevel = FloatArray::create(patchState_->blockSize);
         patchState_->efModLevel = FloatArray::create(patchState_->blockSize);
         patchState_->outLevel = 1.f;
@@ -491,22 +492,21 @@ public:
         }
 
         // Start the save process.
-        getInitialisingPatchProcessor()->patch->sendMidi(
-            MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
+        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
 
         // Send the file index - 0: "iroi.prm", 1: "iroi.alt", 2: "iroi.mod", 3: "iroi.cv", 4: "iroi.rnd"
         getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cp(0, funcMode));
 
-        for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++) {
-            // Convert to 14-bit signed int.
+        for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++) 
+        {
+            // Convert to 14-bit (16384) signed int.
             int16_t value = rintf(values[i] * 8192);
             // Send the parameter's value.
             getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::pb(i, value));
         }
 
         // Finish the process.
-        getInitialisingPatchProcessor()->patch->sendMidi(
-            MidiMessage(USB_COMMAND_SINGLE_BYTE, STOP, 0, 0)); // send MIDI STOP
+        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, STOP, 0, 0)); // send MIDI STOP
     }
 
     // Callback
@@ -782,7 +782,7 @@ public:
     // Called at block rate
     void Poll() {
         if (startup_) {
-            LoadMainParams();
+            //LoadMainParams();
             LoadAltParams();
             LoadModParams();
             LoadCvParams();
